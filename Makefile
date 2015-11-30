@@ -10,6 +10,6 @@ clean:
 	go clean ./...
 	rm -f bin/dcm
 
-bin/dcm: *.go
+bin/dcm: src/*.go
 	go get ./...
-	go build -o bin/dcm
+	go build -o bin/dcm ./src
