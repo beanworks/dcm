@@ -1,0 +1,58 @@
+redis:
+  build: ./srv/bean/service-redis/
+mongo:
+  build: ./srv/bean/service-mongo/
+  environment:
+    - TERM=screen-bce
+postgres:
+  build: ./srv/bean/service-postgresql/
+  environment:
+    - TERM=screen-bce
+php:
+  build: ./srv/bean/service-php-base/
+api:
+  build: ./srv/bean/beanworksapi/
+  dockerfile: ./docker-compose/Dockerfile
+  volumes:
+    - ./srv/bean/beanworksapi/app:/var/bean/app
+    - ./srv/bean/beanworksapi/customizations:/var/bean/customizations
+    - ./srv/bean/beanworksapi/scripts:/var/bean/scripts
+    - ./srv/bean/beanworksapi/src:/var/bean/src
+    - ./srv/bean/beanworksapi/systemConf:/var/bean/systemConf
+    - ./srv/bean/beanworksapi/upgrades:/var/bean/upgrades
+    - ./srv/bean/beanworksapi/web:/var/bean/web
+  links:
+    - php:php
+    - redis:redis
+    - postgres:pg
+    - mongo:mongo
+  environment:
+    - SYMFONY__ENV__PG__HOST=pg
+    - SYMFONY__ENV__PG__PORT=5432
+    - SYMFONY__ENV__MONGO__HOST=mongo
+    - SYMFONY__ENV__MONGO__PORT=27017
+    - SYMFONY__ENV__REDIS__HOST=redis
+    - SYMFONY__ENV__REDIS__PORT=6379
+    - SYMFONY__CACHE_DIR=/var/cache/symfony
+    - SYMFONY__LOGS_DIR=/var/log/symfony
+    - TERM=screen-bce
+  ports:
+    - "8788:80"
+ui:
+  build: ./srv/bean/beanworksui/
+  dockerfile: ./docker-compose/Dockerfile
+  volumes:
+    - ./srv/bean/beanworksui:/usr/src/app
+  environment:
+    - TERM=screen-bce
+  ports:
+    - "9999:8080"
+  links:
+    - api
+nginx:
+  build: ./srv/bean/service-nginx/
+  links:
+    - api
+    - ui
+  ports:
+    - "8080:80"
