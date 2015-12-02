@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	Dir, Project, Srv string
-	Config            map[string]interface{}
+	Config            map[interface{}]interface{}
 }
 
 func NewConfig() *Config {
@@ -29,7 +29,7 @@ func NewConfigFile() *Config {
 		panic(err)
 	}
 
-	if err := yaml.Unmarshal(content, c.Config); err != nil {
+	if err := yaml.Unmarshal(content, &c.Config); err != nil {
 		panic(fmt.Sprintf("Error parsing config file: %s", err))
 	}
 

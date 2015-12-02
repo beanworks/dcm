@@ -1,19 +1,16 @@
 package main
 
-import (
-	"fmt"
-	"os"
-)
+import "os"
 
 func main() {
 	args := os.Args[1:]
-	if len(args) < 1 {
-		usage()
-	}
 	conf := NewConfigFile()
-	Dcm(conf, args)
-}
+	dcm := NewDcm(conf, args)
 
-func usage() {
-	fmt.Println("abc")
+	if len(args) < 1 {
+		dcm.Usage()
+		return
+	}
+
+	dcm.Command()
 }
