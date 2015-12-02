@@ -41,12 +41,13 @@ func (d *Dcm) Setup() {
 		repo := d.GetMapValue(configs, "labels", "com.dcm.repository")
 		dir := d.Config.Srv + "/" + service.(string)
 		cmd := exec.Command("git", "clone", repo.(string), dir)
-		out, err := cmd.Output()
-		if err != nil {
-			panic(err)
+		cmd.Stdout = os.Stdout
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, "Error running git clone cmd", err)
+			os.Exit(1)
 		}
-
-		fmt.Print(string(out))
 	}
 }
 
