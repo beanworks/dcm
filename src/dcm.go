@@ -14,16 +14,24 @@ func NewDcm(c *Config, args []string) *Dcm {
 	return &Dcm{c, args}
 }
 
-func (d *Dcm) Command() {
+func (d *Dcm) Command() int {
+	if len(d.Args) < 1 {
+		d.Usage()
+		return 1
+	}
+
 	switch d.Args[0] {
 	case "help", "h":
 		d.Usage()
+
 	case "setup":
 		d.Setup()
 	default:
 		d.Usage()
-		os.Exit(127)
+		return 127
 	}
+
+	return 0
 }
 
 func (d *Dcm) Setup() {
@@ -32,18 +40,15 @@ func (d *Dcm) Setup() {
 	}
 
 	for service, configs := range d.Config.Config {
-		service = service.(string)
+		service, _ := service.(string)
 		configs, ok := configs.(map[interface{}]interface{})
 		if !ok {
-			fmt.Fprintln(os.Stderr, "Error reading git repository config", service)
-			continue
+			panic("Error reading git repository config for service: " + service)
 		}
-
-		repo := getMapValue(configs, "labels", "com.dcm.repository").(string)
-		dir := d.Config.Srv + "/" + service.(string)
+		repo, _ := getMapValue(configs, "labels", "com.dcm.repository").(string)
+		dir := d.Config.Srv + "/" + service
 		if err := runCommand("git", "clone", repo, dir); err != nil {
-			fmt.Fprintln(os.Stderr, "Error cloning git repository", err)
-			os.Exit(1)
+			panic("Error cloning git repository for service: " + service)
 		}
 	}
 }

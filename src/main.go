@@ -1,16 +1,22 @@
 package main
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 func main() {
-	args := os.Args[1:]
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Fprintln(os.Stderr, "DCM error:", err)
+		}
+	}()
+
 	conf := NewConfigFile()
+	args := os.Args[1:]
+
 	dcm := NewDcm(conf, args)
+	code := dcm.Command()
 
-	if len(args) < 1 {
-		dcm.Usage()
-		return
-	}
-
-	dcm.Command()
+	os.Exit(code)
 }
