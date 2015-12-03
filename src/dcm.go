@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 )
 
 type Dcm struct {
@@ -33,40 +32,20 @@ func (d *Dcm) Setup() {
 	}
 
 	for service, configs := range d.Config.Config {
+		service = service.(string)
 		configs, ok := configs.(map[interface{}]interface{})
 		if !ok {
+			fmt.Fprintln(os.Stderr, "Error reading git repository config", service)
 			continue
 		}
 
-		repo := d.GetMapValue(configs, "labels", "com.dcm.repository")
+		repo := getMapValue(configs, "labels", "com.dcm.repository").(string)
 		dir := d.Config.Srv + "/" + service.(string)
-		cmd := exec.Command("git", "clone", repo.(string), dir)
-		cmd.Stdout = os.Stdout
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, "Error running git clone cmd", err)
+		if err := runCommand("git", "clone", repo, dir); err != nil {
+			fmt.Fprintln(os.Stderr, "Error cloning git repository", err)
 			os.Exit(1)
 		}
 	}
-}
-
-func (d *Dcm) GetMapValue(v map[interface{}]interface{}, keys ...string) interface{} {
-	if len(keys) == 0 {
-		return v
-	}
-
-	if len(keys) == 1 {
-		return v[keys[0]]
-	}
-
-	v, ok := v[keys[0]].(map[interface{}]interface{})
-	if !ok {
-		fmt.Fprintln(os.Stderr, "Error asserting the type of yaml config")
-		os.Exit(1)
-	}
-
-	return d.GetMapValue(v, keys[1:]...)
 }
 
 func (d *Dcm) Usage() {
