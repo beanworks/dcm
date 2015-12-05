@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Dcm struct {
@@ -26,17 +27,17 @@ func (d *Dcm) Command() int {
 	case "setup":
 		return d.Setup()
 	case "run", "r":
-		return d.Run()
+		return d.Run(d.Args[1:]...)
 	case "build", "b":
-		return d.Build()
+		return d.Run("build")
 	case "update", "u":
 		return d.Update()
 	case "shell", "sh":
 		return d.Shell()
 	case "goto", "gt":
-		return d.Goto()
+		return d.Goto(d.Args[1:]...)
 	case "purge", "rm":
-		return d.Purge()
+		return d.Purge(d.Args[1:]...)
 	case "unload", "ul":
 		return d.Unload()
 	default:
@@ -69,10 +70,47 @@ func (d *Dcm) Setup() int {
 }
 
 func (d *Dcm) Run(args ...string) int {
-	return 0
-}
+	if len(args) == 0 {
+		args = append(args, "default")
+	}
 
-func (d *Dcm) Build() int {
+	switch args[0] {
+	case "execute":
+		cmd := cmd("docker-compose", args[1:]...)
+		cmd.Env = append(
+			os.Environ(),
+			"COMPOSE_PROJECT_NAME="+d.Config.Project,
+			"COMPOSE_FILE="+d.Config.File,
+		)
+		if err := cmd.Run(); err != nil {
+			panic(fmt.Sprintf(
+				"Error executing docker-compose with args: [%s] and envs: [%s]",
+				strings.Join(args[1:], ", "),
+				strings.Join(cmd.Env, ", "),
+			))
+		}
+	case "init":
+		fmt.Println("Initializing project [" + d.Config.Project + "]...")
+	case "build":
+		fmt.Println("Building project [" + d.Config.Project + "]...")
+		d.Run("execute", "build")
+	case "start":
+		fmt.Println("Starting project [" + d.Config.Project + "]...")
+		d.Run("execute", "start")
+	case "stop":
+		fmt.Println("Stopping project [" + d.Config.Project + "]...")
+		d.Run("execute", "stop")
+	case "restart":
+		fmt.Println("Restarting project [" + d.Config.Project + "]...")
+		d.Run("execute", "restart")
+	case "up":
+		fmt.Println("Bringing up project [" + d.Config.Project + "]...")
+		d.Run("execute", "up", "-d", "--force-recreate")
+		d.Run("init")
+	default:
+		d.Run("up")
+	}
+
 	return 0
 }
 
@@ -84,11 +122,11 @@ func (d *Dcm) Shell() int {
 	return 0
 }
 
-func (d *Dcm) Goto() int {
+func (d *Dcm) Goto(args ...string) int {
 	return 0
 }
 
-func (d *Dcm) Purge() int {
+func (d *Dcm) Purge(args ...string) int {
 	return 0
 }
 
