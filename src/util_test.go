@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetMapValue(t *testing.T) {
+func TestGetMapVal(t *testing.T) {
 	fixture := map[interface{}]interface{}{
 		"foo": "bar",
 		"aaa": map[interface{}]interface{}{
@@ -14,12 +14,12 @@ func TestGetMapValue(t *testing.T) {
 		},
 	}
 
-	assert.NotPanics(t, func() { getMapValue(fixture, "foo") })
-	assert.NotPanics(t, func() { getMapValue(fixture, "aaa", "bbb") })
-	assert.Panics(t, func() { getMapValue(fixture, "invalid", "keys") })
-	assert.Panics(t, func() { getMapValue(fixture, "foo", "bar", "baz", "qux") })
+	assert.NotPanics(t, func() { getMapVal(fixture, "foo") })
+	assert.NotPanics(t, func() { getMapVal(fixture, "aaa", "bbb") })
+	assert.Panics(t, func() { getMapVal(fixture, "invalid", "keys") })
+	assert.Panics(t, func() { getMapVal(fixture, "foo", "bar", "baz", "qux") })
 
-	assert.Equal(t, fixture, getMapValue(fixture))
-	assert.Equal(t, "bar", getMapValue(fixture, "foo"))
-	assert.Equal(t, "ccc", getMapValue(fixture, "aaa", "bbb"))
+	assert.Equal(t, fixture, getMapVal(fixture))
+	assert.Equal(t, "bar", getMapVal(fixture, "foo"))
+	assert.Equal(t, "ccc", getMapVal(fixture, "aaa", "bbb"))
 }

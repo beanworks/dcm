@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func getMapValue(v map[interface{}]interface{}, keys ...string) interface{} {
+func getMapVal(v map[interface{}]interface{}, keys ...string) interface{} {
 	if len(keys) == 0 {
 		return v
 	}
@@ -19,15 +19,15 @@ func getMapValue(v map[interface{}]interface{}, keys ...string) interface{} {
 		panic("Error asserting the type of yaml config at key: " + keys[0])
 	}
 
-	return getMapValue(v, keys[1:]...)
+	return getMapVal(v, keys[1:]...)
 }
 
-func runCommand(name string, args ...string) error {
+func cmd(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+	return cmd
 }

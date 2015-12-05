@@ -22,10 +22,23 @@ func (d *Dcm) Command() int {
 
 	switch d.Args[0] {
 	case "help", "h":
-		d.Usage()
-
+		return d.Usage()
 	case "setup":
-		d.Setup()
+		return d.Setup()
+	case "run", "r":
+		return d.Run()
+	case "build", "b":
+		return d.Build()
+	case "update", "u":
+		return d.Update()
+	case "shell", "sh":
+		return d.Shell()
+	case "goto", "gt":
+		return d.Goto()
+	case "purge", "rm":
+		return d.Purge()
+	case "unload", "ul":
+		return d.Unload()
 	default:
 		d.Usage()
 		return 127
@@ -34,7 +47,7 @@ func (d *Dcm) Command() int {
 	return 0
 }
 
-func (d *Dcm) Setup() {
+func (d *Dcm) Setup() int {
 	if _, err := os.Stat(d.Config.Srv); os.IsNotExist(err) {
 		os.MkdirAll(d.Config.Srv, 0777)
 	}
@@ -45,15 +58,45 @@ func (d *Dcm) Setup() {
 		if !ok {
 			panic("Error reading git repository config for service: " + service)
 		}
-		repo, _ := getMapValue(configs, "labels", "com.dcm.repository").(string)
+		repo, _ := getMapVal(configs, "labels", "com.dcm.repository").(string)
 		dir := d.Config.Srv + "/" + service
-		if err := runCommand("git", "clone", repo, dir); err != nil {
+		if err := cmd("git", "clone", repo, dir).Run(); err != nil {
 			panic("Error cloning git repository for service: " + service)
 		}
 	}
+
+	return 0
 }
 
-func (d *Dcm) Usage() {
+func (d *Dcm) Run(args ...string) int {
+	return 0
+}
+
+func (d *Dcm) Build() int {
+	return 0
+}
+
+func (d *Dcm) Update() int {
+	return 0
+}
+
+func (d *Dcm) Shell() int {
+	return 0
+}
+
+func (d *Dcm) Goto() int {
+	return 0
+}
+
+func (d *Dcm) Purge() int {
+	return 0
+}
+
+func (d *Dcm) Unload() int {
+	return 0
+}
+
+func (d *Dcm) Usage() int {
 	fmt.Println("")
 	fmt.Println("Docker Compose Manager")
 	fmt.Println("")
@@ -102,4 +145,6 @@ func (d *Dcm) Usage() {
 	fmt.Println("    dcm shell ui")
 	fmt.Println("    ...")
 	fmt.Println("")
+
+	return 0
 }
