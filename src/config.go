@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Dir, Project, Srv string
-	Config            map[interface{}]interface{}
+	Dir, Path, Project, Srv string
+	Config                  map[interface{}]interface{}
 }
 
 func NewConfig() *Config {
@@ -23,8 +23,7 @@ func NewConfig() *Config {
 
 func NewConfigFile() *Config {
 	c := NewConfig()
-	path := c.Dir + "/" + c.Project + ".yml"
-	content, err := ioutil.ReadFile(path)
+	content, err := ioutil.ReadFile(c.Path)
 	if err != nil {
 		panic(err)
 	}
@@ -44,6 +43,7 @@ func (c *Config) loadEnvConfig() *Config {
 		c.Project = env
 	}
 
+	c.Path = c.Dir + "/" + c.Project + ".yml"
 	c.Srv = c.Dir + "/srv/" + c.Project
 
 	return c
