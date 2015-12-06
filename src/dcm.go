@@ -96,42 +96,10 @@ func (d *Dcm) Run(args ...string) (int, error) {
 
 	switch args[0] {
 	case "execute":
-		cmd := cmd("docker-compose", args[1:]...)
-		cmd.Dir = d.Config.Dir
-		cmd.Env = append(
-			os.Environ(),
-			"COMPOSE_PROJECT_NAME="+d.Config.Project,
-			"COMPOSE_FILE="+d.Config.File,
-		)
-		if err := cmd.Run(); err != nil {
-			return 1, fmt.Errorf(
-				"Error executing docker-compose with args [%s], and envs [%s]",
-				strings.Join(args[1:], ", "), strings.Join(cmd.Env, ", "),
-			)
-		}
-		return 0, nil
+		return d.runExecute()
 	case "init":
 		fmt.Println("Initializing project [" + d.Config.Project + "]...")
-		return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
-			init, ok := getMapVal(
-				d.Config.Config, service, "labels", "com.dcm.initscript").(string)
-			if !ok {
-				fmt.Println("Skipping init script for service:", service, "...")
-				return 0, nil
-			}
-			if err := os.Chdir(d.Config.Srv); err != nil {
-				return 1, err
-			}
-			cmd := cmd("/bin/sh", init)
-			cmd.Dir = d.Config.Srv + "/" + service + "/"
-			if err := cmd.Run(); err != nil {
-				return 1, fmt.Errorf(
-					"Error executing init script [%s] for service [%s]: %s",
-					init, service, err,
-				)
-			}
-			return 0, nil
-		})
+		return d.runInit()
 	case "build":
 		fmt.Println("Building project [" + d.Config.Project + "]...")
 		return d.Run("execute", "build")
@@ -146,14 +114,58 @@ func (d *Dcm) Run(args ...string) (int, error) {
 		return d.Run("execute", "restart")
 	case "up":
 		fmt.Println("Bringing up project [" + d.Config.Project + "]...")
-		code, err := d.Run("execute", "up", "-d", "--force-recreate")
-		if err != nil {
-			return code, err
-		}
-		return d.Run("init")
+		return d.runUp()
 	default:
 		return d.Run("up")
 	}
+}
+
+func (d *Dcm) runExecute() (int, error) {
+	cmd := cmd("docker-compose", args[1:]...)
+	cmd.Dir = d.Config.Dir
+	cmd.Env = append(
+		os.Environ(),
+		"COMPOSE_PROJECT_NAME="+d.Config.Project,
+		"COMPOSE_FILE="+d.Config.File,
+	)
+	if err := cmd.Run(); err != nil {
+		return 1, fmt.Errorf(
+			"Error executing docker-compose with args [%s], and envs [%s]",
+			strings.Join(args[1:], ", "), strings.Join(cmd.Env, ", "),
+		)
+	}
+	return 0, nil
+}
+
+func (d *Dcm) runInit() (int, error) {
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		init, ok := getMapVal(
+			d.Config.Config, service, "labels", "com.dcm.initscript").(string)
+		if !ok {
+			fmt.Println("Skipping init script for service:", service, "...")
+			return 0, nil
+		}
+		if err := os.Chdir(d.Config.Srv); err != nil {
+			return 1, err
+		}
+		cmd := cmd("/bin/sh", init)
+		cmd.Dir = d.Config.Srv + "/" + service + "/"
+		if err := cmd.Run(); err != nil {
+			return 1, fmt.Errorf(
+				"Error executing init script [%s] for service [%s]: %s",
+				init, service, err,
+			)
+		}
+		return 0, nil
+	})
+}
+
+func (d *Dcm) runUp() (int, error) {
+	code, err := d.Run("execute", "up", "-d", "--force-recreate")
+	if err != nil {
+		return code, err
+	}
+	return d.Run("init")
 }
 
 func (d *Dcm) Update() (int, error) {
