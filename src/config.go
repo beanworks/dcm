@@ -8,9 +8,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type yamlConfig map[interface{}]interface{}
+
 type Config struct {
 	Dir, File, Project, Srv string
-	Config                  map[interface{}]interface{}
+	Config                  yamlConfig
 }
 
 func NewConfig() *Config {

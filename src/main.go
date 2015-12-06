@@ -16,7 +16,9 @@ func main() {
 	args := os.Args[1:]
 
 	dcm := NewDcm(conf, args)
-	code := dcm.Command()
-
+	code, err := dcm.Command()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+	}
 	os.Exit(code)
 }

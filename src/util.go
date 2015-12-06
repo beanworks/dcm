@@ -5,21 +5,22 @@ import (
 	"os/exec"
 )
 
-func getMapVal(v map[interface{}]interface{}, keys ...string) interface{} {
+func getMapVal(v yamlConfig, keys ...string) interface{} {
 	if len(keys) == 0 {
 		return v
 	}
 
-	if len(keys) == 1 {
-		return v[keys[0]]
+	if vv, ok := v[keys[0]]; ok {
+		if len(keys) == 1 {
+			return vv
+		}
+
+		if vvv, ok := vv.(yamlConfig); ok {
+			return getMapVal(vvv, keys[1:]...)
+		}
 	}
 
-	v, ok := v[keys[0]].(map[interface{}]interface{})
-	if !ok {
-		panic("Error asserting the type of yaml config at key: " + keys[0])
-	}
-
-	return getMapVal(v, keys[1:]...)
+	return nil
 }
 
 func cmd(name string, args ...string) *exec.Cmd {

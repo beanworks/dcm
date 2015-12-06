@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 )
+
+type doForService func(string, yamlConfig) (int, error)
 
 type Dcm struct {
 	Config *Config
@@ -15,15 +18,16 @@ func NewDcm(c *Config, args []string) *Dcm {
 	return &Dcm{c, args}
 }
 
-func (d *Dcm) Command() int {
+func (d *Dcm) Command() (int, error) {
 	if len(d.Args) < 1 {
 		d.Usage()
-		return 1
+		return 1, nil
 	}
 
 	switch d.Args[0] {
 	case "help", "h":
-		return d.Usage()
+		d.Usage()
+		return 0, nil
 	case "setup":
 		return d.Setup()
 	case "run", "r":
@@ -42,34 +46,50 @@ func (d *Dcm) Command() int {
 		return d.Unload()
 	default:
 		d.Usage()
-		return 127
+		return 127, nil
 	}
-
-	return 0
 }
 
-func (d *Dcm) Setup() int {
+func (d *Dcm) Setup() (int, error) {
 	if _, err := os.Stat(d.Config.Srv); os.IsNotExist(err) {
 		os.MkdirAll(d.Config.Srv, 0777)
 	}
 
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		repo, ok := getMapVal(configs, "labels", "com.dcm.repository").(string)
+		if !ok {
+			return 1, errors.New(
+				"Error reading git repository config for service: " + service)
+		}
+		dir := d.Config.Srv + "/" + service
+		cmd := cmd("git", "clone", repo, dir)
+		cmd.Dir = d.Config.Dir
+		if err := cmd.Run(); err != nil {
+			return 1, errors.New("Error cloning git repository for service: " + service)
+		}
+
+		return 0, nil
+	})
+}
+
+func (d *Dcm) doForEachService(fn doForService) (int, error) {
 	for service, configs := range d.Config.Config {
 		service, _ := service.(string)
-		configs, ok := configs.(map[interface{}]interface{})
+		configs, ok := configs.(yamlConfig)
 		if !ok {
 			panic("Error reading git repository config for service: " + service)
 		}
-		repo, _ := getMapVal(configs, "labels", "com.dcm.repository").(string)
-		dir := d.Config.Srv + "/" + service
-		if err := cmd("git", "clone", repo, dir).Run(); err != nil {
-			panic("Error cloning git repository for service: " + service)
+
+		code, err := fn(service, configs)
+		if err != nil {
+			return code, err
 		}
 	}
 
-	return 0
+	return 0, nil
 }
 
-func (d *Dcm) Run(args ...string) int {
+func (d *Dcm) Run(args ...string) (int, error) {
 	if len(args) == 0 {
 		args = append(args, "default")
 	}
@@ -77,64 +97,86 @@ func (d *Dcm) Run(args ...string) int {
 	switch args[0] {
 	case "execute":
 		cmd := cmd("docker-compose", args[1:]...)
+		cmd.Dir = d.Config.Dir
 		cmd.Env = append(
 			os.Environ(),
 			"COMPOSE_PROJECT_NAME="+d.Config.Project,
 			"COMPOSE_FILE="+d.Config.File,
 		)
 		if err := cmd.Run(); err != nil {
-			panic(fmt.Sprintf(
-				"Error executing docker-compose with args: [%s] and envs: [%s]",
-				strings.Join(args[1:], ", "),
-				strings.Join(cmd.Env, ", "),
-			))
+			return 1, fmt.Errorf(
+				"Error executing docker-compose with args [%s], and envs [%s]",
+				strings.Join(args[1:], ", "), strings.Join(cmd.Env, ", "),
+			)
 		}
+		return 0, nil
 	case "init":
 		fmt.Println("Initializing project [" + d.Config.Project + "]...")
+		return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+			init, ok := getMapVal(
+				d.Config.Config, service, "labels", "com.dcm.initscript").(string)
+			if !ok {
+				fmt.Println("Skipping init script for service:", service, "...")
+				return 0, nil
+			}
+			if err := os.Chdir(d.Config.Srv); err != nil {
+				return 1, err
+			}
+			cmd := cmd("/bin/sh", init)
+			cmd.Dir = d.Config.Srv + "/" + service + "/"
+			if err := cmd.Run(); err != nil {
+				return 1, fmt.Errorf(
+					"Error executing init script [%s] for service [%s]: %s",
+					init, service, err,
+				)
+			}
+			return 0, nil
+		})
 	case "build":
 		fmt.Println("Building project [" + d.Config.Project + "]...")
-		d.Run("execute", "build")
+		return d.Run("execute", "build")
 	case "start":
 		fmt.Println("Starting project [" + d.Config.Project + "]...")
-		d.Run("execute", "start")
+		return d.Run("execute", "start")
 	case "stop":
 		fmt.Println("Stopping project [" + d.Config.Project + "]...")
-		d.Run("execute", "stop")
+		return d.Run("execute", "stop")
 	case "restart":
 		fmt.Println("Restarting project [" + d.Config.Project + "]...")
-		d.Run("execute", "restart")
+		return d.Run("execute", "restart")
 	case "up":
 		fmt.Println("Bringing up project [" + d.Config.Project + "]...")
-		d.Run("execute", "up", "-d", "--force-recreate")
-		d.Run("init")
+		code, err := d.Run("execute", "up", "-d", "--force-recreate")
+		if err != nil {
+			return code, err
+		}
+		return d.Run("init")
 	default:
-		d.Run("up")
+		return d.Run("up")
 	}
-
-	return 0
 }
 
-func (d *Dcm) Update() int {
-	return 0
+func (d *Dcm) Update() (int, error) {
+	return 0, nil
 }
 
-func (d *Dcm) Shell() int {
-	return 0
+func (d *Dcm) Shell() (int, error) {
+	return 0, nil
 }
 
-func (d *Dcm) Goto(args ...string) int {
-	return 0
+func (d *Dcm) Goto(args ...string) (int, error) {
+	return 0, nil
 }
 
-func (d *Dcm) Purge(args ...string) int {
-	return 0
+func (d *Dcm) Purge(args ...string) (int, error) {
+	return 0, nil
 }
 
-func (d *Dcm) Unload() int {
-	return 0
+func (d *Dcm) Unload() (int, error) {
+	return 0, nil
 }
 
-func (d *Dcm) Usage() int {
+func (d *Dcm) Usage() {
 	fmt.Println("")
 	fmt.Println("Docker Compose Manager")
 	fmt.Println("")
@@ -183,6 +225,4 @@ func (d *Dcm) Usage() int {
 	fmt.Println("    dcm shell ui")
 	fmt.Println("    ...")
 	fmt.Println("")
-
-	return 0
 }
