@@ -39,12 +39,12 @@ func (d *Dcm) Command() (int, error) {
 		return d.Run("build")
 	case "dir", "d":
 		return d.Dir(moreArgs...)
-	case "update", "u":
-		return d.Update(moreArgs...)
 	case "shell", "sh":
 		return d.Shell(moreArgs...)
 	case "branch", "br":
 		return d.Branch(moreArgs...)
+	case "update", "u":
+		return d.Update(moreArgs...)
 	case "purge", "rm":
 		return d.Purge(moreArgs...)
 	default:
@@ -185,10 +185,6 @@ func (d *Dcm) Dir(args ...string) (int, error) {
 	return 0, nil
 }
 
-func (d *Dcm) Update(args ...string) (int, error) {
-	return 0, nil
-}
-
 func (d *Dcm) Shell(args ...string) (int, error) {
 	if len(args) < 1 {
 		return 1, errors.New("Error: no service name specified.")
@@ -235,6 +231,10 @@ func (d *Dcm) Branch(args ...string) (int, error) {
 	return 0, nil
 }
 
+func (d *Dcm) Update(args ...string) (int, error) {
+	return 0, nil
+}
+
 func (d *Dcm) Purge(args ...string) (int, error) {
 	if len(args) == 0 {
 		args = append(args, "default")
@@ -242,15 +242,39 @@ func (d *Dcm) Purge(args ...string) (int, error) {
 
 	switch args[0] {
 	case "img", "images":
-		return 0, nil
+		return d.purgeImages()
 	case "con", "containers":
-		return 0, nil
+		return d.purgeContainers()
 	case "all":
-		d.Purge("containers")
-		return d.Purge("images")
+		return d.purgeAll()
 	default:
 		return d.Purge("containers")
 	}
+}
+
+func (d *Dcm) purgeImages() (int, error) {
+	return 0, nil
+}
+
+func (d *Dcm) purgeContainers() (int, error) {
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		cid, err := d.getContainerId(service)
+		if err != nil {
+			return 1, err
+		}
+		if err := cmd("docker", "kill", cid).Run(); err != nil {
+			return 1, err
+		}
+		if err := cmd("docker", "rm", "-v", cid).Run(); err != nil {
+			return 1, err
+		}
+		return 0, nil
+	})
+}
+
+func (d *Dcm) purgeAll() (int, error) {
+	d.Purge("containers")
+	return d.Purge("images")
 }
 
 func (d *Dcm) Usage() {
