@@ -47,8 +47,6 @@ func (d *Dcm) Command() (int, error) {
 		return d.Branch(moreArgs...)
 	case "purge", "rm":
 		return d.Purge(moreArgs...)
-	case "unload", "ul":
-		return d.Unload()
 	default:
 		d.Usage()
 		return 127, nil
@@ -221,10 +219,6 @@ func (d *Dcm) Branch(args ...string) (int, error) {
 }
 
 func (d *Dcm) Purge(args ...string) (int, error) {
-	return 0, nil
-}
-
-func (d *Dcm) Unload() (int, error) {
 	return 0, nil
 }
 
