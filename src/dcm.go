@@ -273,7 +273,10 @@ func (d *Dcm) purgeContainers() (int, error) {
 }
 
 func (d *Dcm) purgeAll() (int, error) {
-	d.Purge("containers")
+	code, err := d.Purge("containers")
+	if err != nil {
+		return code, err
+	}
 	return d.Purge("images")
 }
 

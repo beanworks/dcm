@@ -18,7 +18,7 @@ func main() {
 	dcm := NewDcm(conf, args)
 	code, err := dcm.Command()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, "DCM error:", err)
 	}
 	os.Exit(code)
 }
