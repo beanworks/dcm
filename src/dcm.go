@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -222,8 +224,33 @@ func (d *Dcm) getContainerId(service string) (string, error) {
 }
 
 func (d *Dcm) getImageRepository(service string) (string, error) {
-	// docker images | awk '$1 ~ /bean_api/ { print $1 }'
-	return "", nil
+	first := exec.Command("docker", "images")
+	second := exec.Command("awk", fmt.Sprintf(
+		"$1 ~ /%s_%s/ { print $1 }", d.Config.Project, service))
+
+	reader, writer := io.Pipe()
+	first.Stdout = writer
+	second.Stdin = reader
+	var buff bytes.Buffer
+	second.Stdout = &buff
+
+	if err := first.Start(); err != nil {
+		return "", err
+	}
+	if err := second.Start(); err != nil {
+		return "", err
+	}
+	if err := first.Wait(); err != nil {
+		return "", err
+	}
+	if err := writer.Close(); err != nil {
+		return "", err
+	}
+	if err := second.Wait(); err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(buff.String()), nil
 }
 
 func (d *Dcm) Branch(args ...string) (int, error) {
@@ -253,7 +280,16 @@ func (d *Dcm) Purge(args ...string) (int, error) {
 }
 
 func (d *Dcm) purgeImages() (int, error) {
-	return 0, nil
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		repo, err := d.getImageRepository(service)
+		if err != nil {
+			return 1, err
+		}
+		if err := cmd("docker", "rmi", repo).Run(); err != nil {
+			return 1, err
+		}
+		return 0, nil
+	})
 }
 
 func (d *Dcm) purgeContainers() (int, error) {
