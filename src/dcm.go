@@ -174,10 +174,13 @@ func (d *Dcm) runUp() (int, error) {
 }
 
 func (d *Dcm) Dir(args ...string) (int, error) {
-	dir := d.Config.Srv
-	if len(args) > 0 {
-		if _, err := os.Stat(dir + "/" + args[0]); err == nil {
-			dir += "/" + args[0]
+	var dir string
+	if len(args) < 1 {
+		dir = d.Config.Dir
+	} else {
+		dir = d.Config.Srv + "/" + args[0]
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			dir = d.Config.Dir
 		}
 	}
 	fmt.Fprint(os.Stdout, dir)
