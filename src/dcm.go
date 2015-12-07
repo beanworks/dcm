@@ -194,32 +194,63 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 		return 1, errors.New("Error: no service name specified.")
 	}
 
-	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, args[0])
-	out, err := exec.Command("docker", "ps", "-q", "-f", filter).Output()
+	cid, err := d.getContainerId(args[0])
 	if err != nil {
 		return 1, err
 	}
 
-	cid := strings.TrimSpace(string(out))
-	if cid == "" {
-		return 1, fmt.Errorf(
-			"Error: no running container name starts with %s_%s_",
-			d.Config.Project, args[0],
-		)
-	}
-	if err := cmd("docker", "exec", "-it", cid, "bash").Run(); err != nil {
+	err = cmd("docker", "exec", "-it", cid, "bash").Run()
+	if err != nil {
 		return 1, err
 	}
 
 	return 0, nil
 }
 
+func (d *Dcm) getContainerId(service string) (string, error) {
+	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, service)
+	out, err := exec.Command("docker", "ps", "-q", "-f", filter).Output()
+	if err != nil {
+		return "", err
+	}
+
+	cid := strings.TrimSpace(string(out))
+	if cid == "" {
+		return "", fmt.Errorf(
+			"Error: no running container name starts with %s_%s_",
+			d.Config.Project, service,
+		)
+	}
+
+	return cid, nil
+}
+
+func (d *Dcm) getImageRepository(service string) (string, error) {
+	// docker images | awk '$1 ~ /bean_api/ { print $1 }'
+	return "", nil
+}
+
 func (d *Dcm) Branch(args ...string) (int, error) {
+	// ( dcm goto ${@:2} && git rev-parse --abbrev-ref HEAD )
 	return 0, nil
 }
 
 func (d *Dcm) Purge(args ...string) (int, error) {
-	return 0, nil
+	if len(args) == 0 {
+		args = append(args, "default")
+	}
+
+	switch args[0] {
+	case "img", "images":
+		return 0, nil
+	case "con", "containers":
+		return 0, nil
+	case "all":
+		d.Purge("containers")
+		return d.Purge("images")
+	default:
+		return d.Purge("containers")
+	}
 }
 
 func (d *Dcm) Usage() {
