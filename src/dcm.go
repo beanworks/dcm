@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -24,6 +25,8 @@ func (d *Dcm) Command() (int, error) {
 		return 1, nil
 	}
 
+	moreArgs := d.Args[1:]
+
 	switch d.Args[0] {
 	case "help", "h":
 		d.Usage()
@@ -31,17 +34,19 @@ func (d *Dcm) Command() (int, error) {
 	case "setup":
 		return d.Setup()
 	case "run", "r":
-		return d.Run(d.Args[1:]...)
+		return d.Run(moreArgs...)
 	case "build", "b":
 		return d.Run("build")
+	case "dir", "d":
+		return d.Dir(moreArgs...)
 	case "update", "u":
-		return d.Update()
+		return d.Update(moreArgs...)
 	case "shell", "sh":
-		return d.Shell()
-	case "goto", "gt":
-		return d.Goto(d.Args[1:]...)
+		return d.Shell(moreArgs...)
+	case "branch", "br":
+		return d.Branch(moreArgs...)
 	case "purge", "rm":
-		return d.Purge(d.Args[1:]...)
+		return d.Purge(moreArgs...)
 	case "unload", "ul":
 		return d.Unload()
 	default:
@@ -96,7 +101,7 @@ func (d *Dcm) Run(args ...string) (int, error) {
 
 	switch args[0] {
 	case "execute":
-		return d.runExecute()
+		return d.runExecute(args[1:]...)
 	case "init":
 		fmt.Println("Initializing project [" + d.Config.Project + "]...")
 		return d.runInit()
@@ -120,8 +125,8 @@ func (d *Dcm) Run(args ...string) (int, error) {
 	}
 }
 
-func (d *Dcm) runExecute() (int, error) {
-	cmd := cmd("docker-compose", args[1:]...)
+func (d *Dcm) runExecute(args ...string) (int, error) {
+	cmd := cmd("docker-compose", args...)
 	cmd.Dir = d.Config.Dir
 	cmd.Env = append(
 		os.Environ(),
@@ -131,7 +136,7 @@ func (d *Dcm) runExecute() (int, error) {
 	if err := cmd.Run(); err != nil {
 		return 1, fmt.Errorf(
 			"Error executing docker-compose with args [%s], and envs [%s]",
-			strings.Join(args[1:], ", "), strings.Join(cmd.Env, ", "),
+			strings.Join(args, ", "), strings.Join(cmd.Env, ", "),
 		)
 	}
 	return 0, nil
@@ -168,15 +173,47 @@ func (d *Dcm) runUp() (int, error) {
 	return d.Run("init")
 }
 
-func (d *Dcm) Update() (int, error) {
+func (d *Dcm) Dir(args ...string) (int, error) {
+	dir := d.Config.Srv
+	if len(args) > 0 {
+		if _, err := os.Stat(dir + "/" + args[0]); err == nil {
+			dir += "/" + args[0]
+		}
+	}
+	fmt.Fprint(os.Stdout, dir)
 	return 0, nil
 }
 
-func (d *Dcm) Shell() (int, error) {
+func (d *Dcm) Update(args ...string) (int, error) {
 	return 0, nil
 }
 
-func (d *Dcm) Goto(args ...string) (int, error) {
+func (d *Dcm) Shell(args ...string) (int, error) {
+	if len(args) < 1 {
+		return 1, errors.New("Error: no service name specified.")
+	}
+
+	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, args[0])
+	out, err := exec.Command("docker", "ps", "-q", "-f", filter).Output()
+	if err != nil {
+		return 1, err
+	}
+
+	cid := strings.TrimSpace(string(out))
+	if cid == "" {
+		return 1, fmt.Errorf(
+			"Error: no running container name starts with %s_%s_",
+			d.Config.Project, args[0],
+		)
+	}
+	if err := cmd("docker", "exec", "-it", cid, "bash").Run(); err != nil {
+		return 1, err
+	}
+
+	return 0, nil
+}
+
+func (d *Dcm) Branch(args ...string) (int, error) {
 	return 0, nil
 }
 
