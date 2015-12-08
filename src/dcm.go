@@ -144,8 +144,7 @@ func (d *Dcm) runExecute(args ...string) (int, error) {
 
 func (d *Dcm) runInit() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
-		init, ok := getMapVal(
-			d.Config.Config, service, "labels", "com.dcm.initscript").(string)
+		init, ok := getMapVal(configs, "labels", "com.dcm.initscript").(string)
 		if !ok {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
@@ -153,13 +152,19 @@ func (d *Dcm) runInit() (int, error) {
 		if err := os.Chdir(d.Config.Srv); err != nil {
 			return 1, err
 		}
-		cmd := cmd("/bin/sh", init)
-		cmd.Dir = d.Config.Srv + "/" + service + "/"
-		if err := cmd.Run(); err != nil {
+		c := cmd("/bin/sh", init)
+		c.Dir = d.Config.Srv + "/" + service + "/"
+		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
 				"Error executing init script [%s] for service [%s]: %s",
 				init, service, err,
 			)
+		}
+		branch, ok := getMapVal(configs, "labels", "com.dcm.branch").(string)
+		if ok {
+			if err := cmd("git", "checkout", branch).Run(); err != nil {
+				return 1, err
+			}
 		}
 		return 0, nil
 	})
@@ -292,7 +297,25 @@ func (d *Dcm) branchForOne(service string) (int, error) {
 }
 
 func (d *Dcm) Update(args ...string) (int, error) {
-	return 0, nil
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		fmt.Print(service + ": ")
+		if err := os.Chdir(d.Config.Srv + "/" + service); err != nil {
+			return 1, err
+		}
+		branch, ok := getMapVal(configs, "labels", "com.dcm.branch").(string)
+		if !ok {
+			// When service > labels > com.dcm.branch is not defined in
+			// the yaml config file, use "master" as default branch
+			branch = "master"
+		}
+		if err := cmd("git", "checkout", branch).Run(); err != nil {
+			return 1, err
+		}
+		if err := cmd("git", "pull").Run(); err != nil {
+			return 1, err
+		}
+		return 0, nil
+	})
 }
 
 func (d *Dcm) Purge(args ...string) (int, error) {
