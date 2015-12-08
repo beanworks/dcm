@@ -254,7 +254,40 @@ func (d *Dcm) getImageRepository(service string) (string, error) {
 }
 
 func (d *Dcm) Branch(args ...string) (int, error) {
-	// ( dcm goto ${@:2} && git rev-parse --abbrev-ref HEAD )
+	if len(args) < 1 {
+		return d.branchForAll()
+	} else {
+		return d.branchForOne(args[0])
+	}
+}
+
+func (d *Dcm) branchForAll() (int, error) {
+	code, err := d.branchForOne("dcm")
+	if err != nil {
+		return code, err
+	}
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		return d.branchForOne(service)
+	})
+}
+
+func (d *Dcm) branchForOne(service string) (int, error) {
+	var dir string
+	if service == "dcm" {
+		dir = d.Config.Dir
+	} else {
+		dir = d.Config.Srv + "/" + service
+	}
+
+	if err := os.Chdir(dir); err != nil {
+		return 1, err
+	}
+
+	fmt.Print(service + ": ")
+	if err := cmd("git", "rev-parse", "--abbrev-ref", "HEAD").Run(); err != nil {
+		return 1, err
+	}
+
 	return 0, nil
 }
 
