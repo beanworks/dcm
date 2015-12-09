@@ -3,7 +3,6 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,15 +22,17 @@ yet:
 `
 
 func TestCreateNewConfig(t *testing.T) {
+	os.Unsetenv("DCM_DIR")
+	os.Unsetenv("DCM_PROJECT")
+
 	c := NewConfig()
 	wd, _ := os.Getwd()
-	dir := strings.TrimSuffix(wd, "/src")
 
 	assert.Equal(t, &Config{
-		Dir:     dir,
+		Dir:     wd,
 		Project: "bean",
-		File:    dir + "/bean.yml",
-		Srv:     dir + "/srv/bean",
+		File:    wd + "/bean.yml",
+		Srv:     wd + "/srv/bean",
 	}, c)
 }
 
