@@ -1,0 +1,17 @@
+language: go
+
+go:
+  - 1.5
+
+before_install:
+  - go get -v golang.org/x/tools/cmd/vet
+  - go get -v github.com/golang/lint/golint
+
+install:
+  - go install -race -v std
+  - go get -race -t -v ./...
+  - go install -race -v ./...
+
+script:
+  - $HOME/gopath/bin/golint .
+  - make test

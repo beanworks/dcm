@@ -25,4 +25,5 @@ _testmain.go
 
 *.swp
 *.yml
+!.*.yml
 .DS_Store
