@@ -82,7 +82,7 @@ func (d *Dcm) doForEachService(fn doForService) (int, error) {
 		service, _ := service.(string)
 		configs, ok := configs.(yamlConfig)
 		if !ok {
-			panic("Error reading git repository config for service: " + service)
+			panic("Error reading configs for service: " + service)
 		}
 
 		code, err := fn(service, configs)
