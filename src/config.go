@@ -48,5 +48,10 @@ func (c *Config) loadEnvConfig() *Config {
 	c.File = c.Dir + "/" + c.Project + ".yml"
 	c.Srv = c.Dir + "/srv/" + c.Project
 
+	// This is created for unit test
+	if env := os.Getenv("DCM_CONFIG_FILE"); env != "" {
+		c.File = env
+	}
+
 	return c
 }
