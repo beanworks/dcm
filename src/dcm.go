@@ -67,12 +67,19 @@ func (d *Dcm) Setup() (int, error) {
 				"Error reading git repository config for service: " + service)
 		}
 		dir := d.Config.Srv + "/" + service
-		cmd := cmd("git", "clone", repo, dir)
-		cmd.Dir = d.Config.Dir
-		if err := cmd.Run(); err != nil {
+		c := cmd("git", "clone", repo, dir)
+		c.Dir = d.Config.Dir
+		if err := c.Run(); err != nil {
 			return 1, errors.New("Error cloning git repository for service: " + service)
 		}
-
+		branch, ok := getMapVal(configs, "labels", "com.dcm.branch").(string)
+		if ok {
+			c = cmd("git", "checkout", branch)
+			c.Dir = d.Config.Srv + "/" + service + "/"
+			if err := c.Run(); err != nil {
+				return 1, err
+			}
+		}
 		return 0, nil
 	})
 }
@@ -149,9 +156,6 @@ func (d *Dcm) runInit() (int, error) {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
 		}
-		if err := os.Chdir(d.Config.Srv); err != nil {
-			return 1, err
-		}
 		c := cmd("/bin/bash", init)
 		c.Dir = d.Config.Srv + "/" + service + "/"
 		if err := c.Run(); err != nil {
@@ -159,12 +163,6 @@ func (d *Dcm) runInit() (int, error) {
 				"Error executing init script [%s] for service [%s]: %s",
 				init, service, err,
 			)
-		}
-		branch, ok := getMapVal(configs, "labels", "com.dcm.branch").(string)
-		if ok {
-			if err := cmd("git", "checkout", branch).Run(); err != nil {
-				return 1, err
-			}
 		}
 		return 0, nil
 	})
