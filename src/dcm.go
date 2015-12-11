@@ -152,7 +152,7 @@ func (d *Dcm) runInit() (int, error) {
 		if err := os.Chdir(d.Config.Srv); err != nil {
 			return 1, err
 		}
-		c := cmd("/bin/sh", init)
+		c := cmd("/bin/bash", init)
 		c.Dir = d.Config.Srv + "/" + service + "/"
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(

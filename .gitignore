@@ -24,7 +24,8 @@ _testmain.go
 *.test
 *.prof
 
+!.*.yml
 *.swp
 *.yml
-!.*.yml
 .DS_Store
+bin/dcm
