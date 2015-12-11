@@ -61,7 +61,7 @@ func (d *Dcm) Setup() (int, error) {
 	}
 
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
-		repo, ok := getMapVal(configs, "labels", "com.dcm.repository").(string)
+		repo, ok := getMapVal(configs, "labels", "dcm.repository").(string)
 		if !ok {
 			return 1, errors.New(
 				"Error reading git repository config for service: " + service)
@@ -72,7 +72,7 @@ func (d *Dcm) Setup() (int, error) {
 		if err := c.Run(); err != nil {
 			return 1, errors.New("Error cloning git repository for service: " + service)
 		}
-		branch, ok := getMapVal(configs, "labels", "com.dcm.branch").(string)
+		branch, ok := getMapVal(configs, "labels", "dcm.branch").(string)
 		if ok {
 			c = cmd("git", "checkout", branch)
 			c.Dir = d.Config.Srv + "/" + service + "/"
@@ -151,7 +151,7 @@ func (d *Dcm) runExecute(args ...string) (int, error) {
 
 func (d *Dcm) runInit() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
-		init, ok := getMapVal(configs, "labels", "com.dcm.initscript").(string)
+		init, ok := getMapVal(configs, "labels", "dcm.initscript").(string)
 		if !ok {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
@@ -300,9 +300,9 @@ func (d *Dcm) Update(args ...string) (int, error) {
 		if err := os.Chdir(d.Config.Srv + "/" + service); err != nil {
 			return 1, err
 		}
-		branch, ok := getMapVal(configs, "labels", "com.dcm.branch").(string)
+		branch, ok := getMapVal(configs, "labels", "dcm.branch").(string)
 		if !ok {
-			// When service > labels > com.dcm.branch is not defined in
+			// When service > labels > dcm.branch is not defined in
 			// the yaml config file, use "master" as default branch
 			branch = "master"
 		}
