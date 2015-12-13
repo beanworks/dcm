@@ -210,9 +210,9 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 
 func (d *Dcm) getContainerId(service string) (string, error) {
 	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, service)
-	out, err := exec.Command("docker", "ps", "-q", "-f", filter).Output()
+	out, err := cmd("docker", "ps", "-q", "-f", filter).CombinedOutput()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s: %s", err.Error(), string(out))
 	}
 
 	cid := strings.TrimSpace(string(out))
