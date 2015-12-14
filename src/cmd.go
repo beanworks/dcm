@@ -41,7 +41,7 @@ func (c *Cmd) Dir(dir string) *Cmd {
 
 func (c *Cmd) Env(env []string) *Cmd {
 	if c.Cmd != nil {
-		c.Cmd.Env = append(c.Cmd.Env, env...)
+		c.Cmd.Env = env
 	}
 	return c
 }

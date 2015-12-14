@@ -25,7 +25,7 @@ func TestCmdEnv(t *testing.T) {
 	c.Cmd = helperCommand(t, "echo")
 
 	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1"}, c.Cmd.Env)
-	c.Env([]string{"foo=bar", "baz=qux"})
+	c.Env([]string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"})
 	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"}, c.Cmd.Env)
 }
 
