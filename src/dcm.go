@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -15,10 +12,11 @@ type doForService func(string, yamlConfig) (int, error)
 type Dcm struct {
 	Config *Config
 	Args   []string
+	Cmd    *Cmd
 }
 
 func NewDcm(c *Config, args []string) *Dcm {
-	return &Dcm{c, args}
+	return &Dcm{c, args, NewCmd()}
 }
 
 func (d *Dcm) Command() (int, error) {
@@ -63,19 +61,22 @@ func (d *Dcm) Setup() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
 		repo, ok := getMapVal(configs, "labels", "dcm.repository").(string)
 		if !ok {
-			return 1, errors.New(
-				"Error reading git repository config for service: " + service)
+			return 1, fmt.Errorf(
+				"Error reading git repository config for service [%s]",
+				service,
+			)
 		}
 		dir := d.Config.Srv + "/" + service
-		c := cmd("git", "clone", repo, dir)
-		c.Dir = d.Config.Dir
+		c := d.Cmd.Exec("git", "clone", repo, dir).Dir(dir)
 		if err := c.Run(); err != nil {
-			return 1, errors.New("Error cloning git repository for service: " + service)
+			return 1, fmt.Errorf(
+				"Error cloning git repository for service [%s]: %v",
+				service, err,
+			)
 		}
 		branch, ok := getMapVal(configs, "labels", "dcm.branch").(string)
 		if ok {
-			c = cmd("git", "checkout", branch)
-			c.Dir = d.Config.Srv + "/" + service + "/"
+			c = d.Cmd.Exec("git", "checkout", branch).Dir(dir)
 			if err := c.Run(); err != nil {
 				return 1, err
 			}
@@ -110,22 +111,22 @@ func (d *Dcm) Run(args ...string) (int, error) {
 	case "execute":
 		return d.runExecute(args[1:]...)
 	case "init":
-		fmt.Println("Initializing project [" + d.Config.Project + "]...")
+		fmt.Println("Initializing project:", d.Config.Project, "...")
 		return d.runInit()
 	case "build":
-		fmt.Println("Building project [" + d.Config.Project + "]...")
+		fmt.Println("Building project:", d.Config.Project, "...")
 		return d.Run("execute", "build")
 	case "start":
-		fmt.Println("Starting project [" + d.Config.Project + "]...")
+		fmt.Println("Starting project:", d.Config.Project, "...")
 		return d.Run("execute", "start")
 	case "stop":
-		fmt.Println("Stopping project [" + d.Config.Project + "]...")
+		fmt.Println("Stopping project:", d.Config.Project, "...")
 		return d.Run("execute", "stop")
 	case "restart":
-		fmt.Println("Restarting project [" + d.Config.Project + "]...")
+		fmt.Println("Restarting project:", d.Config.Project, "...")
 		return d.Run("execute", "restart")
 	case "up":
-		fmt.Println("Bringing up project [" + d.Config.Project + "]...")
+		fmt.Println("Bringing up project:", d.Config.Project, "...")
 		return d.runUp()
 	default:
 		return d.Run("up")
@@ -133,17 +134,19 @@ func (d *Dcm) Run(args ...string) (int, error) {
 }
 
 func (d *Dcm) runExecute(args ...string) (int, error) {
-	cmd := cmd("docker-compose", args...)
-	cmd.Dir = d.Config.Dir
-	cmd.Env = append(
+	env := append(
 		os.Environ(),
 		"COMPOSE_PROJECT_NAME="+d.Config.Project,
 		"COMPOSE_FILE="+d.Config.File,
 	)
-	if err := cmd.Run(); err != nil {
+	c := d.Cmd.
+		Exec("docker-compose", args...).
+		Dir(d.Config.Dir).
+		Env(env)
+	if err := c.Run(); err != nil {
 		return 1, fmt.Errorf(
-			"Error executing docker-compose with args [%s], and envs [%s]",
-			strings.Join(args, ", "), strings.Join(cmd.Env, ", "),
+			"Error executing `docker-compose %s`: %v\nEnv vars: %s",
+			strings.Join(args, " "), err, strings.Join(c.Cmd.Env, ", "),
 		)
 	}
 	return 0, nil
@@ -156,11 +159,10 @@ func (d *Dcm) runInit() (int, error) {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
 		}
-		c := cmd("/bin/bash", init)
-		c.Dir = d.Config.Srv + "/" + service + "/"
+		c := d.Cmd.Exec("/bin/bash", init).Dir(d.Config.Srv + "/" + service)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
-				"Error executing init script [%s] for service [%s]: %s",
+				"Error executing init script [%s] for service [%s]: %v",
 				init, service, err,
 			)
 		}
@@ -200,8 +202,7 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 		return 1, err
 	}
 
-	err = cmd("docker", "exec", "-it", cid, "bash").Run()
-	if err != nil {
+	if err := d.Cmd.Exec("docker", "exec", "-it", cid, "bash").Run(); err != nil {
 		return 1, err
 	}
 
@@ -210,12 +211,12 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 
 func (d *Dcm) getContainerId(service string) (string, error) {
 	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, service)
-	out, err := cmd("docker", "ps", "-q", "-f", filter).CombinedOutput()
+	out, err := d.Cmd.Exec("docker", "ps", "-q", "-f", filter).Out()
 	if err != nil {
-		return "", fmt.Errorf("%s: %s", err.Error(), string(out))
+		return "", d.Cmd.Error(err, out)
 	}
 
-	cid := strings.TrimSpace(string(out))
+	cid := d.Cmd.String(out)
 	if cid == "" {
 		return "", fmt.Errorf(
 			"Error: no running container name starts with %s_%s_",
@@ -227,33 +228,15 @@ func (d *Dcm) getContainerId(service string) (string, error) {
 }
 
 func (d *Dcm) getImageRepository(service string) (string, error) {
-	first := exec.Command("docker", "images")
-	second := exec.Command("awk", fmt.Sprintf(
-		"$1 ~ /%s_%s/ { print $1 }", d.Config.Project, service))
-
-	reader, writer := io.Pipe()
-	first.Stdout = writer
-	second.Stdin = reader
-	var buff bytes.Buffer
-	second.Stdout = &buff
-
-	if err := first.Start(); err != nil {
-		return "", err
+	repo := d.Config.Project + "_" + service
+	out, err := d.Cmd.Exec("docker", "images").Out()
+	if err != nil {
+		return "", d.Cmd.Error(err, out)
 	}
-	if err := second.Start(); err != nil {
-		return "", err
+	if strings.Contains(string(out), repo+" ") {
+		return repo, nil
 	}
-	if err := first.Wait(); err != nil {
-		return "", err
-	}
-	if err := writer.Close(); err != nil {
-		return "", err
-	}
-	if err := second.Wait(); err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(buff.String()), nil
+	return "", nil
 }
 
 func (d *Dcm) Branch(args ...string) (int, error) {
@@ -287,7 +270,7 @@ func (d *Dcm) branchForOne(service string) (int, error) {
 	}
 
 	fmt.Print(service + ": ")
-	if err := cmd("git", "rev-parse", "--abbrev-ref", "HEAD").Run(); err != nil {
+	if err := d.Cmd.Exec("git", "rev-parse", "--abbrev-ref", "HEAD").Run(); err != nil {
 		return 1, err
 	}
 
@@ -306,12 +289,14 @@ func (d *Dcm) Update(args ...string) (int, error) {
 			// the yaml config file, use "master" as default branch
 			branch = "master"
 		}
-		if err := cmd("git", "checkout", branch).Run(); err != nil {
+
+		if err := d.Cmd.Exec("git", "checkout", branch).Run(); err != nil {
 			return 1, err
 		}
-		if err := cmd("git", "pull").Run(); err != nil {
+		if err := d.Cmd.Exec("git", "pull").Run(); err != nil {
 			return 1, err
 		}
+
 		return 0, nil
 	})
 }
@@ -339,7 +324,7 @@ func (d *Dcm) purgeImages() (int, error) {
 		if err != nil {
 			return 1, err
 		}
-		if err := cmd("docker", "rmi", repo).Run(); err != nil {
+		if err = d.Cmd.Exec("docker", "rmi", repo).Run(); err != nil {
 			return 1, err
 		}
 		return 0, nil
@@ -352,10 +337,10 @@ func (d *Dcm) purgeContainers() (int, error) {
 		if err != nil {
 			return 1, err
 		}
-		if err := cmd("docker", "kill", cid).Run(); err != nil {
+		if err := d.Cmd.Exec("docker", "kill", cid).Run(); err != nil {
 			return 1, err
 		}
-		if err := cmd("docker", "rm", "-v", cid).Run(); err != nil {
+		if err := d.Cmd.Exec("docker", "rm", "-v", cid).Run(); err != nil {
 			return 1, err
 		}
 		return 0, nil
