@@ -67,7 +67,7 @@ func (d *Dcm) Setup() (int, error) {
 			)
 		}
 		dir := d.Config.Srv + "/" + service
-		c := d.Cmd.Exec("git", "clone", repo, dir).Dir(dir)
+		c := d.Cmd.Exec("git", "clone", repo, dir).Dir(d.Config.Dir)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
 				"Error cloning git repository for service [%s]: %v",
