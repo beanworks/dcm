@@ -12,7 +12,7 @@ type doForService func(string, yamlConfig) (int, error)
 type Dcm struct {
 	Config *Config
 	Args   []string
-	Cmd    *Cmd
+	Cmd    Executable
 }
 
 func NewDcm(c *Config, args []string) *Dcm {
@@ -67,7 +67,7 @@ func (d *Dcm) Setup() (int, error) {
 			)
 		}
 		dir := d.Config.Srv + "/" + service
-		c := d.Cmd.Exec("git", "clone", repo, dir).Dir(d.Config.Dir)
+		c := d.Cmd.Exec("git", "clone", repo, dir).Setdir(d.Config.Dir)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
 				"Error cloning git repository for service [%s]: %v",
@@ -76,7 +76,7 @@ func (d *Dcm) Setup() (int, error) {
 		}
 		branch, ok := getMapVal(configs, "labels", "dcm.branch").(string)
 		if ok {
-			c = d.Cmd.Exec("git", "checkout", branch).Dir(dir)
+			c = d.Cmd.Exec("git", "checkout", branch).Setdir(dir)
 			if err := c.Run(); err != nil {
 				return 1, err
 			}
@@ -141,12 +141,12 @@ func (d *Dcm) runExecute(args ...string) (int, error) {
 	)
 	c := d.Cmd.
 		Exec("docker-compose", args...).
-		Dir(d.Config.Dir).
-		Env(env)
+		Setdir(d.Config.Dir).
+		Setenv(env)
 	if err := c.Run(); err != nil {
 		return 1, fmt.Errorf(
 			"Error executing `docker-compose %s`: %v\nEnv vars: %s",
-			strings.Join(args, " "), err, strings.Join(c.Cmd.Env, ", "),
+			strings.Join(args, " "), err, strings.Join(c.Getenv(), ", "),
 		)
 	}
 	return 0, nil
@@ -159,7 +159,7 @@ func (d *Dcm) runInit() (int, error) {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
 		}
-		c := d.Cmd.Exec("/bin/bash", init).Dir(d.Config.Srv + "/" + service)
+		c := d.Cmd.Exec("/bin/bash", init).Setdir(d.Config.Srv + "/" + service)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
 				"Error executing init script [%s] for service [%s]: %v",
@@ -213,10 +213,10 @@ func (d *Dcm) getContainerId(service string) (string, error) {
 	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, service)
 	out, err := d.Cmd.Exec("docker", "ps", "-q", "-f", filter).Out()
 	if err != nil {
-		return "", d.Cmd.Error(err, out)
+		return "", d.Cmd.FormatError(err, out)
 	}
 
-	cid := d.Cmd.String(out)
+	cid := d.Cmd.FormatOutput(out)
 	if cid == "" {
 		return "", fmt.Errorf(
 			"Error: no running container name starts with %s_%s_",
@@ -231,7 +231,7 @@ func (d *Dcm) getImageRepository(service string) (string, error) {
 	repo := d.Config.Project + "_" + service
 	out, err := d.Cmd.Exec("docker", "images").Out()
 	if err != nil {
-		return "", d.Cmd.Error(err, out)
+		return "", d.Cmd.FormatError(err, out)
 	}
 	if strings.Contains(string(out), repo+" ") {
 		return repo, nil

@@ -11,56 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCmdDir(t *testing.T) {
-	c := NewCmd()
-	c.Cmd = helperCommand(t, "echo")
-
-	assert.Equal(t, "", c.Cmd.Dir)
-	c.Dir("/test/dir")
-	assert.Equal(t, "/test/dir", c.Cmd.Dir)
-}
-
-func TestCmdEnv(t *testing.T) {
-	c := NewCmd()
-	c.Cmd = helperCommand(t, "echo")
-
-	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1"}, c.Cmd.Env)
-	c.Env([]string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"})
-	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"}, c.Cmd.Env)
-}
-
-func TestCmdRun(t *testing.T) {
-	var out bytes.Buffer
-	c := NewCmd()
-	c.Stdout = &out
-	c.Cmd = helperCommand(t, "echo", "foo", "bar")
-	c.Run()
-
-	assert.Equal(t, "foo bar\n", out.String())
-}
-
-func TestCmdOut(t *testing.T) {
-	c := NewCmd()
-	c.Cmd = helperCommand(t, "echo", "baz", "qux")
-	out, _ := c.Out()
-
-	assert.Equal(t, "baz qux\n", string(out))
-}
-
-func TestCmdString(t *testing.T) {
-	c := NewCmd()
-	fixture := []byte("foobar\n")
-
-	assert.Equal(t, "foobar", c.String(fixture))
-}
-
-func TestCmdError(t *testing.T) {
-	c := NewCmd()
-	err := errors.New("foobar")
-	out := []byte("bazqux")
-
-	assert.Equal(t, errors.New("foobar: bazqux"), c.Error(err, out))
-}
+// ========== Mocked command executer as test helpers for Cmd ==========
 
 // Test helper functions and command mock
 func helperCommand(t *testing.T, s ...string) *exec.Cmd {
@@ -104,4 +55,58 @@ func TestHelperProcess(*testing.T) {
 		fmt.Fprintf(os.Stderr, "Unknown command %q\n", cmd)
 		os.Exit(2)
 	}
+}
+
+// ========== Here starts the real tests for Cmd ==========
+
+func TestCmdSetdir(t *testing.T) {
+	c := NewCmd().
+		Setcmd(helperCommand(t, "echo"))
+
+	assert.Equal(t, "", c.Getdir())
+	c.Setdir("/test/dir")
+	assert.Equal(t, "/test/dir", c.Getdir())
+}
+
+func TestCmdSetenv(t *testing.T) {
+	c := NewCmd().
+		Setcmd(helperCommand(t, "echo"))
+
+	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1"}, c.Getenv())
+	c.Setenv([]string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"})
+	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"}, c.Getenv())
+}
+
+func TestCmdRun(t *testing.T) {
+	var out bytes.Buffer
+
+	NewCmd().
+		SetStdout(&out).
+		Setcmd(helperCommand(t, "echo", "foo", "bar")).
+		Run()
+
+	assert.Equal(t, "foo bar\n", out.String())
+}
+
+func TestCmdOut(t *testing.T) {
+	out, _ := NewCmd().
+		Setcmd(helperCommand(t, "echo", "baz", "qux")).
+		Out()
+
+	assert.Equal(t, "baz qux\n", string(out))
+}
+
+func TestCmdFormatOutput(t *testing.T) {
+	c := NewCmd()
+	fixture := []byte("foobar\n")
+
+	assert.Equal(t, "foobar", c.FormatOutput(fixture))
+}
+
+func TestCmdFormatError(t *testing.T) {
+	c := NewCmd()
+	err := errors.New("foobar")
+	out := []byte("bazqux")
+
+	assert.Equal(t, errors.New("foobar: bazqux"), c.FormatError(err, out))
 }
