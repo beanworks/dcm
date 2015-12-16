@@ -144,6 +144,58 @@ func TestSetup(t *testing.T) {
 	}
 }
 
+func TestDoForEachService(t *testing.T) {
+	var (
+		doSrv doForService
+		code  int
+		err   error
+	)
+
+	dcm := NewDcm(NewConfig(), []string{})
+
+	// Bad fixture data
+	fixtureBad := yamlConfig{
+		"srv1": "config1",
+		"srv2": "config2",
+	}
+	// Good fixture data
+	fixtureGood := yamlConfig{
+		"srv1": yamlConfig{
+			"config": "value",
+		},
+		"srv2": yamlConfig{
+			"config": "value",
+		},
+	}
+
+	// Negative test case for failing with panic
+	dcm.Config.Config = fixtureBad
+	doSrv = func(service string, configs yamlConfig) (int, error) {
+		return 0, nil
+	}
+	assert.Panics(t, func() { dcm.doForEachService(doSrv) })
+
+	// Negative test case for failing with error
+	dcm.Config.Config = fixtureGood
+	doSrv = func(service string, configs yamlConfig) (int, error) {
+		return 1, errors.New("Error")
+	}
+	assert.NotPanics(t, func() { dcm.doForEachService(doSrv) })
+	code, err = dcm.doForEachService(doSrv)
+	assert.Equal(t, 1, code)
+	assert.Error(t, err)
+
+	// Positive test case, success
+	dcm.Config.Config = fixtureGood
+	doSrv = func(service string, configs yamlConfig) (int, error) {
+		return 0, nil
+	}
+	assert.NotPanics(t, func() { dcm.doForEachService(doSrv) })
+	code, err = dcm.doForEachService(doSrv)
+	assert.Equal(t, 0, code)
+	assert.NoError(t, err)
+}
+
 func TestRunExecute(t *testing.T) {
 	fixtures := []struct {
 		name, dir string
@@ -236,54 +288,26 @@ func TestRunInit(t *testing.T) {
 	}
 }
 
-func TestDoForEachService(t *testing.T) {
-	var (
-		doSrv doForService
-		code  int
-		err   error
-	)
+func TestDir(t *testing.T) {
+}
 
-	dcm := NewDcm(NewConfig(), []string{})
+func TestShell(t *testing.T) {
+}
 
-	// Bad fixture data
-	fixtureBad := yamlConfig{
-		"srv1": "config1",
-		"srv2": "config2",
-	}
-	// Good fixture data
-	fixtureGood := yamlConfig{
-		"srv1": yamlConfig{
-			"config": "value",
-		},
-		"srv2": yamlConfig{
-			"config": "value",
-		},
-	}
+func TestGetContainerId(t *testing.T) {
+}
 
-	// Negative test case for failing with panic
-	dcm.Config.Config = fixtureBad
-	doSrv = func(service string, configs yamlConfig) (int, error) {
-		return 0, nil
-	}
-	assert.Panics(t, func() { dcm.doForEachService(doSrv) })
+func TestGetImageRepository(t *testing.T) {
+}
 
-	// Negative test case for failing with error
-	dcm.Config.Config = fixtureGood
-	doSrv = func(service string, configs yamlConfig) (int, error) {
-		return 1, errors.New("Error")
-	}
-	assert.NotPanics(t, func() { dcm.doForEachService(doSrv) })
-	code, err = dcm.doForEachService(doSrv)
-	assert.Equal(t, 1, code)
-	assert.Error(t, err)
+func TestBranchForOne(t *testing.T) {
+}
 
-	// Positive test case, success
-	dcm.Config.Config = fixtureGood
-	doSrv = func(service string, configs yamlConfig) (int, error) {
-		return 0, nil
-	}
-	assert.NotPanics(t, func() { dcm.doForEachService(doSrv) })
-	code, err = dcm.doForEachService(doSrv)
-	assert.Equal(t, 0, code)
-	assert.NoError(t, err)
+func TestUpdate(t *testing.T) {
+}
+
+func TestPurgeImages(t *testing.T) {
+}
+
+func TestPurgeContainers(t *testing.T) {
 }
