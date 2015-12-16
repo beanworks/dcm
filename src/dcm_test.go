@@ -52,6 +52,15 @@ func (c *CmdMock) Run() error {
 			c.args[1] == "test-dcm-setup-error" {
 			return errors.New("exit status 1")
 		}
+	case "docker-compose":
+		if c.dir == "/test/dcm/run/execute/error" {
+			return errors.New("exit status 1")
+		}
+	case "/bin/bash":
+		if len(c.args) == 1 &&
+			c.args[0] == "test/dcm/run/init/error" {
+			return errors.New("exit status 1")
+		}
 	}
 	return nil
 }
@@ -60,39 +69,17 @@ func (c *CmdMock) Out() ([]byte, error) {
 	return []byte(""), nil
 }
 
-// ========== Test helper for Dcm ==========
-
-type helperTestFixture struct {
-	name   string
-	config yamlConfig
-	code   int
-	err    error
-}
-
-type helperTestFunc func() (int, error)
-
-func helperTestDcm(t *testing.T, dcm *Dcm, fn helperTestFunc, fix []helperTestFixture) {
-	for n, test := range fix {
-		dcm.Config.Config = test.config
-		code, err := fn()
-		assert.Equal(t, test.code, code,
-			"[%d: %s] Incorrect error code returned", n, test.name)
-		if test.err != nil {
-			assert.EqualError(t, err, test.err.Error(),
-				"[%d: %s] Incorrect error returned", n, test.name)
-		} else {
-			assert.NoError(t, err,
-				"[%d: %s] Non-nil error returned", n, test.name)
-		}
-	}
-}
-
 // ========== Here starts the real tests for Dcm ==========
 
 func TestSetup(t *testing.T) {
-	fixtures := []helperTestFixture{
+	fixtures := []struct {
+		name   string
+		config yamlConfig
+		code   int
+		err    error
+	}{
 		{
-			name: "Negative test case for failing reading git repository config",
+			name: "Negative case for failing reading git repository config",
 			config: yamlConfig{
 				"service": yamlConfig{"build": "./build/dir"},
 			},
@@ -100,7 +87,7 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("Error reading git repository config for service [service]"),
 		},
 		{
-			name: "Negative test case for failing cloning git repository",
+			name: "Negative case for failing cloning git repository",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{"dcm.repository": "test-dcm-setup-error"},
@@ -110,7 +97,7 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("Error cloning git repository for service [service]: exit status 1"),
 		},
 		{
-			name: "Negative test case for failing switching to pre-configured git branch",
+			name: "Negative case for failing switching to pre-configured git branch",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -123,7 +110,7 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("exit status 1"),
 		},
 		{
-			name: "Positive test case, success",
+			name: "Positive case, success",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -145,7 +132,108 @@ func TestSetup(t *testing.T) {
 	dcm.Cmd = &CmdMock{}
 	dcm.Config.Srv = td
 
-	helperTestDcm(t, dcm, func() (int, error) { return dcm.Setup() }, fixtures)
+	for n, test := range fixtures {
+		dcm.Config.Config = test.config
+		code, err := dcm.Setup()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
+}
+
+func TestRunExecute(t *testing.T) {
+	fixtures := []struct {
+		name, dir string
+		code      int
+	}{
+		{
+			name: "Negative case for failing to run docker-compose command",
+			dir:  "/test/dcm/run/execute/error",
+			code: 1,
+		},
+		{
+			name: "Positive case, success",
+			dir:  "/test/dcm/run/execute/ok",
+			code: 0,
+		},
+	}
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
+	for n, test := range fixtures {
+		dcm.Config.Dir = test.dir
+		code, err := dcm.runExecute()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.code == 1 {
+			assert.Error(t, err, "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
+}
+
+func TestRunInit(t *testing.T) {
+	fixtures := []struct {
+		name   string
+		config yamlConfig
+		code   int
+		err    error
+	}{
+		{
+			name: "Negative case for config has no init script",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.test": "test",
+					},
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+		{
+			name: "Negative case for failing to exuecute init script",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.initscript": "test/dcm/run/init/error",
+					},
+				},
+			},
+			code: 1,
+			err:  errors.New("Error executing init script [test/dcm/run/init/error] for service [service]: exit status 1"),
+		},
+		{
+			name: "Positive case, success",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.initscript": "test/dcm/run/init/ok",
+					},
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+	}
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
+	for n, test := range fixtures {
+		dcm.Config.Config = test.config
+		code, err := dcm.runInit()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
 }
 
 func TestDoForEachService(t *testing.T) {
