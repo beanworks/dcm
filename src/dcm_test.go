@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -289,6 +292,53 @@ func TestRunInit(t *testing.T) {
 }
 
 func TestDir(t *testing.T) {
+	dir, err := ioutil.TempDir("", "dcm")
+	require.Nil(t, err)
+	srv, err := ioutil.TempDir(dir, "service")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	var out string
+
+	// Test Dir() without args
+	out = helperTestOsStdout(t, func() {
+		dcm.Config.Dir = dir
+		dcm.Dir()
+	})
+	assert.Equal(t, dir, out)
+
+	// Test Dir() with args
+	out = helperTestOsStdout(t, func() {
+		dcm.Config.Srv = dir
+		dcm.Dir(path.Base(srv))
+	})
+	assert.Equal(t, srv, out)
+}
+
+func helperTestOsStdout(t *testing.T, fn func()) (out string) {
+	// Capture stdout
+	stdout := os.Stdout
+	r, w, err := os.Pipe()
+	require.Nil(t, err)
+	os.Stdout = w
+	outC := make(chan string)
+
+	go func() {
+		var buf bytes.Buffer
+		_, err := io.Copy(&buf, r)
+		r.Close()
+		require.Nil(t, err)
+		outC <- buf.String()
+	}()
+
+	fn()
+
+	w.Close()
+	os.Stdout = stdout
+	out = <-outC
+
+	return
 }
 
 func TestShell(t *testing.T) {
