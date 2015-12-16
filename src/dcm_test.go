@@ -69,6 +69,17 @@ func (c *CmdMock) Run() error {
 }
 
 func (c *CmdMock) Out() ([]byte, error) {
+	switch c.name {
+	case "docker":
+		if len(c.args) == 4 && c.args[0] == "ps" &&
+			c.args[3] == "name=dcmtest_error_" {
+			return []byte("error"), errors.New("exit status 1")
+		}
+		if len(c.args) == 4 && c.args[0] == "ps" &&
+			c.args[3] == "name=dcmtest_ok_" {
+			return []byte("dcmtest_ok_1"), nil
+		}
+	}
 	return []byte(""), nil
 }
 
@@ -345,6 +356,26 @@ func TestShell(t *testing.T) {
 }
 
 func TestGetContainerId(t *testing.T) {
+	var (
+		cid string
+		err error
+	)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
+
+	cid, err = dcm.getContainerId("error")
+	assert.Equal(t, "", cid)
+	assert.EqualError(t, err, "exit status 1: error")
+
+	cid, err = dcm.getContainerId("empty")
+	assert.Equal(t, "", cid)
+	assert.EqualError(t, err, "Error: no running container name starts with dcmtest_empty_")
+
+	cid, err = dcm.getContainerId("ok")
+	assert.Equal(t, "dcmtest_ok_1", cid)
+	assert.NoError(t, err)
 }
 
 func TestGetImageRepository(t *testing.T) {
