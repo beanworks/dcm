@@ -55,6 +55,10 @@ func (c *CmdMock) Run() error {
 			c.args[1] == "test-dcm-setup-error" {
 			return errors.New("exit status 1")
 		}
+		if len(c.args) == 3 && c.args[0] == "rev-parse" &&
+			c.dir == "/test/git/rev-parse/dcm/error" {
+			return errors.New("exit status 1")
+		}
 	case "docker-compose":
 		if c.dir == "/test/dcm/run/execute/error" {
 			return errors.New("exit status 1")
@@ -457,15 +461,57 @@ func TestGetImageRepository(t *testing.T) {
 }
 
 func TestBranchForOne(t *testing.T) {
+	var (
+		code int
+		err  error
+	)
+
+	dir, err := ioutil.TempDir("", "dcm")
+	require.Nil(t, err)
+	srv, err := ioutil.TempDir(dir, "service")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
 	// Negative case: get dcm branch failed at os.Chdir()
+	dcm.Config.Dir = "/fake/dcm/dir"
+	code, err = dcm.branchForOne("dcm")
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "chdir /fake/dcm/dir: no such file or directory")
 
 	// Negative case: get service branch failed at os.Chdir()
+	dcm.Config.Srv = "/fake/dcm/srv"
+	code, err = dcm.branchForOne("service")
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "chdir /fake/dcm/srv/service: no such file or directory")
 
 	// Negative case: git failed to get dcm branch
+	dcm.Config.Dir = dir
+	dcm.Cmd.Setdir("/test/git/rev-parse/dcm/error")
+	code, err = dcm.branchForOne("dcm")
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "exit status 1")
 
 	// Negative case: git failed to get service branch
+	dcm.Config.Srv = dir
+	dcm.Cmd.Setdir("/test/git/rev-parse/dcm/error")
+	code, err = dcm.branchForOne(path.Base(srv))
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "exit status 1")
 
 	// Positive case: success
+	dcm.Config.Dir = dir
+	dcm.Cmd.Setdir("/test/git/rev-parse/dcm/ok")
+	code, err = dcm.branchForOne("dcm")
+
+	assert.Equal(t, 0, code)
+	assert.NoError(t, err)
 }
 
 func TestUpdate(t *testing.T) {
