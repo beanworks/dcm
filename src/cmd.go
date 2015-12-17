@@ -11,12 +11,10 @@ import (
 type Executable interface {
 	Exec(string, ...string) Executable
 	Setcmd(*exec.Cmd) Executable
-	Getcmd() *exec.Cmd
 	SetStdin(io.Reader) Executable
 	SetStdout(io.Writer) Executable
 	SetStderr(io.Writer) Executable
 	Setdir(string) Executable
-	Getdir() string
 	Setenv([]string) Executable
 	Getenv() []string
 	Run() error
@@ -53,10 +51,6 @@ func (c *Cmd) Setcmd(cmd *exec.Cmd) Executable {
 	return c
 }
 
-func (c *Cmd) Getcmd() *exec.Cmd {
-	return c.cmd
-}
-
 func (c *Cmd) SetStdin(stdin io.Reader) Executable {
 	c.stdin = stdin
 	return c
@@ -77,13 +71,6 @@ func (c *Cmd) Setdir(dir string) Executable {
 		c.cmd.Dir = dir
 	}
 	return c
-}
-
-func (c *Cmd) Getdir() string {
-	if c.cmd != nil {
-		return c.cmd.Dir
-	}
-	return ""
 }
 
 func (c *Cmd) Setenv(env []string) Executable {

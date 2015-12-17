@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,21 +60,54 @@ func TestHelperProcess(*testing.T) {
 
 // ========== Here starts the real tests for Cmd ==========
 
-func TestCmdSetdir(t *testing.T) {
-	c := NewCmd().
-		Setcmd(helperCommand(t, "echo"))
+func TestCmdExec(t *testing.T) {
+	name := os.Args[0]
+	args := []string{"-test.run=TestHelperProcess", "--", "echo"}
 
-	assert.Equal(t, "", c.Getdir())
-	c.Setdir("/test/dir")
-	assert.Equal(t, "/test/dir", c.Getdir())
+	c := &Cmd{}
+	c.Exec(name, args...)
+
+	assert.Equal(t, name, c.name)
+	assert.Equal(t, args, c.args)
+	assert.Equal(t, "*exec.Cmd", reflect.TypeOf(c.cmd).String())
 }
 
-func TestCmdSetenv(t *testing.T) {
-	c := NewCmd().
-		Setcmd(helperCommand(t, "echo"))
+func TestCmdSetStdin(t *testing.T) {
+	c := &Cmd{}
+	c.SetStdin(os.Stdin)
 
+	assert.IsType(t, os.Stdin, c.stdin)
+}
+
+func TestCmdSetStderr(t *testing.T) {
+	c := &Cmd{}
+	c.SetStderr(os.Stderr)
+
+	assert.IsType(t, os.Stderr, c.stderr)
+}
+
+func TestCmdSetdir(t *testing.T) {
+	c := &Cmd{}
+	c.cmd = helperCommand(t, "echo")
+
+	assert.Equal(t, "", c.cmd.Dir)
+	c.Setdir("/test/dir")
+	assert.Equal(t, "/test/dir", c.cmd.Dir)
+}
+
+func TestCmdSetenvAndGetenv(t *testing.T) {
+	c := &Cmd{}
+
+	assert.Equal(t, []string{}, c.Getenv())
+
+	c.cmd = helperCommand(t, "echo")
+
+	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1"}, c.cmd.Env)
 	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1"}, c.Getenv())
+
 	c.Setenv([]string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"})
+
+	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"}, c.cmd.Env)
 	assert.Equal(t, []string{"GO_WANT_HELPER_PROCESS=1", "foo=bar", "baz=qux"}, c.Getenv())
 }
 
