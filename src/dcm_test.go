@@ -79,6 +79,9 @@ func (c *CmdMock) Out() ([]byte, error) {
 			c.args[3] == "name=dcmtest_ok_" {
 			return []byte("dcmtest_ok_1"), nil
 		}
+		if len(c.args) == 1 && c.args[0] == "images" {
+			return []byte("dcmtest_ok foobar bazqux"), nil
+		}
 	}
 	return []byte(""), nil
 }
@@ -379,6 +382,22 @@ func TestGetContainerId(t *testing.T) {
 }
 
 func TestGetImageRepository(t *testing.T) {
+	var (
+		repo string
+		err  error
+	)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
+
+	repo, err = dcm.getImageRepository("empty")
+	assert.Equal(t, "", repo)
+	assert.NoError(t, err)
+
+	repo, err = dcm.getImageRepository("ok")
+	assert.Equal(t, "dcmtest_ok", repo)
+	assert.NoError(t, err)
 }
 
 func TestBranchForOne(t *testing.T) {
