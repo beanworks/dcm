@@ -1,10 +1,5 @@
 package main
 
-import (
-	"os"
-	"os/exec"
-)
-
 func getMapVal(v yamlConfig, keys ...string) interface{} {
 	if len(keys) == 0 {
 		return v
@@ -21,14 +16,4 @@ func getMapVal(v yamlConfig, keys ...string) interface{} {
 	}
 
 	return nil
-}
-
-func cmd(name string, args ...string) *exec.Cmd {
-	cmd := exec.Command(name, args...)
-
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-
-	return cmd
 }
