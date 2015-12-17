@@ -85,6 +85,32 @@ dcm setup && dcm run
 Generally in your day to day development process, you should only need to run either `dcm run`
 (shorthand version `dcm r`) or `dcm build && dcm run` (shorthand version `dcm b && dcm r`).
 
+## Update DCM
+
+#### 1. Uninstall DCM from bash/zsh
+
+```
+dcm unload
+```
+
+#### 2. Pull the latest version DCM with git
+
+```
+git pull
+```
+
+#### 3. Source bashrc/zshrc/profile again to reinstall DCM
+
+```
+source ~/.profile
+# or
+source ~/.bash_profile
+# or
+source ~/.bashrc
+# or
+zsh
+```
+
 ## Setting up multi instance
 
 #### 1. Create YAML configuration files for multiple instances
