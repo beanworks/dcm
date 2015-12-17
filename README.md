@@ -5,6 +5,20 @@
 DCM is a wrapper for docker-compose. It enables one click setup, build && run process for a set
 micro services with docker. DCM also provides a couple of neat shorthand commands.
 
+*Supported Platform*
+
+* Mac OS X, 64bit (tested)
+* Linux, 64bit
+  * Ubuntu (tested)
+  * Debian
+  * Mint
+  * CentOS
+  * Red Hat
+  * Fedora
+  * Gentoo
+* FreeBSD, 64bit
+* Windows (Cygwin), 64bit
+
 ## Getting started
 
 To install DCM, first checkout DCM on your local file system, and create an enhanced version
@@ -87,19 +101,19 @@ Generally in your day to day development process, you should only need to run ei
 
 ## Update DCM
 
-#### 1. Uninstall DCM from bash/zsh
+First, uninstall DCM from bash/zsh
 
 ```
 dcm unload
 ```
 
-#### 2. Pull the latest version DCM with git
+Then, pull the latest version DCM with git
 
 ```
 git pull
 ```
 
-#### 3. Source bashrc/zshrc/profile again to reinstall DCM
+Lastly, source bashrc/zshrc/profile again to reinstall DCM
 
 ```
 source ~/.profile
