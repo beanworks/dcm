@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var yamlFixture string = `
+var yamlFixtureGood string = `
 foo:
   bar:
     baz: qux
@@ -19,6 +19,11 @@ yet:
     - value1
     - value2
     - value3
+`
+
+var yamlFixtureBad string = `
+foo: bar
+    - baz: qux
 `
 
 func TestCreateNewConfig(t *testing.T) {
@@ -50,18 +55,38 @@ func TestCreateNewConfigWithEnvVars(t *testing.T) {
 	}, c)
 }
 
-func TestCreateNewConfigFile(t *testing.T) {
-	tf, err := ioutil.TempFile("", "testproj.yml")
+func helperCreateTestFile(t *testing.T, prefix, fixture string) string {
+	tf, err := ioutil.TempFile("", prefix)
 	require.Nil(t, err)
-	defer os.Remove(tf.Name())
 
-	_, err = tf.WriteString(yamlFixture)
+	_, err = tf.WriteString(fixture)
 	require.Nil(t, err)
+
 	err = tf.Close()
 	require.Nil(t, err)
 
-	os.Setenv("DCM_CONFIG_FILE", tf.Name())
+	return tf.Name()
+}
 
+func TestCreateNewConfigFile(t *testing.T) {
+	var file string
+
+	// Negative case: Bad YAML file name
+	os.Setenv("DCM_CONFIG_FILE", "bad_file_name.yml")
+
+	assert.Panics(t, func() { NewConfigFile() })
+
+	// Negative case: Bad YAML config formatting
+	file = helperCreateTestFile(t, "bad_yaml", yamlFixtureBad)
+	defer os.Remove(file)
+	os.Setenv("DCM_CONFIG_FILE", file)
+
+	assert.Panics(t, func() { NewConfigFile() })
+
+	// Positive case: success
+	file = helperCreateTestFile(t, "good_yaml", yamlFixtureGood)
+	defer os.Remove(file)
+	os.Setenv("DCM_CONFIG_FILE", file)
 	c := NewConfigFile()
 
 	assert.Equal(t, yamlConfig{
