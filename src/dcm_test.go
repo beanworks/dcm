@@ -64,6 +64,11 @@ func (c *CmdMock) Run() error {
 			c.args[0] == "test/dcm/run/init/error" {
 			return errors.New("exit status 1")
 		}
+	case "docker":
+		if len(c.args) == 4 && c.args[0] == "exec" &&
+			c.args[2] == "dcmtest_failed_to_run_docker_exec_1" {
+			return errors.New("exit status 1")
+		}
 	}
 	return nil
 }
@@ -71,13 +76,15 @@ func (c *CmdMock) Run() error {
 func (c *CmdMock) Out() ([]byte, error) {
 	switch c.name {
 	case "docker":
-		if len(c.args) == 4 && c.args[0] == "ps" &&
-			c.args[3] == "name=dcmtest_error_" {
-			return []byte("error"), errors.New("exit status 1")
-		}
-		if len(c.args) == 4 && c.args[0] == "ps" &&
-			c.args[3] == "name=dcmtest_ok_" {
-			return []byte("dcmtest_ok_1"), nil
+		if len(c.args) == 4 && c.args[0] == "ps" {
+			switch c.args[3] {
+			case "name=dcmtest_ok_":
+				return []byte("dcmtest_ok_1"), nil
+			case "name=dcmtest_failed_to_run_docker_exec_":
+				return []byte("dcmtest_failed_to_run_docker_exec_1"), nil
+			default:
+				return []byte("error"), errors.New("exit status 1")
+			}
 		}
 		if len(c.args) == 1 && c.args[0] == "images" {
 			return []byte("dcmtest_ok foobar bazqux"), nil
@@ -356,6 +363,38 @@ func helperTestOsStdout(t *testing.T, fn func()) (out string) {
 }
 
 func TestShell(t *testing.T) {
+	var (
+		code int
+		err  error
+	)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
+
+	// Negative case: failed when there is no arg passed
+	code, err = dcm.Shell()
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "Error: no service name specified.")
+
+	// Negative case: failed to get docker container id
+	code, err = dcm.Shell("failed_to_get_container_id")
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "exit status 1: error")
+
+	// Negative case: failed to run docker exec command
+	code, err = dcm.Shell("failed_to_run_docker_exec")
+
+	assert.Equal(t, 1, code)
+	assert.EqualError(t, err, "exit status 1")
+
+	// Positive case: success
+	code, err = dcm.Shell("ok")
+
+	assert.Equal(t, 0, code)
+	assert.NoError(t, err)
 }
 
 func TestGetContainerId(t *testing.T) {
@@ -368,14 +407,17 @@ func TestGetContainerId(t *testing.T) {
 	dcm.Cmd = &CmdMock{}
 	dcm.Config.Project = "dcmtest"
 
-	cid, err = dcm.getContainerId("error")
+	// Negative case: failed to get docker container id
+	cid, err = dcm.getContainerId("docker_ps_error")
 	assert.Equal(t, "", cid)
 	assert.EqualError(t, err, "exit status 1: error")
 
-	cid, err = dcm.getContainerId("empty")
+	// Negative case: got an empty container id
+	cid, err = dcm.getContainerId("empty_container_id")
 	assert.Equal(t, "", cid)
-	assert.EqualError(t, err, "Error: no running container name starts with dcmtest_empty_")
+	assert.EqualError(t, err, "exit status 1: error")
 
+	// Positive case: success
 	cid, err = dcm.getContainerId("ok")
 	assert.Equal(t, "dcmtest_ok_1", cid)
 	assert.NoError(t, err)
