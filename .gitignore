@@ -29,3 +29,4 @@ _testmain.go
 *.yml
 .DS_Store
 bin/dcm
+c.out
