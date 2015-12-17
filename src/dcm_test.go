@@ -87,7 +87,11 @@ func (c *CmdMock) Out() ([]byte, error) {
 			}
 		}
 		if len(c.args) == 1 && c.args[0] == "images" {
-			return []byte("dcmtest_ok foobar bazqux"), nil
+			if c.dir == "/test/docker/images/error" {
+				return []byte("error"), errors.New("exit status 1")
+			} else {
+				return []byte("dcmtest_ok foobar bazqux"), nil
+			}
 		}
 	}
 	return []byte(""), nil
@@ -433,16 +437,35 @@ func TestGetImageRepository(t *testing.T) {
 	dcm.Cmd = &CmdMock{}
 	dcm.Config.Project = "dcmtest"
 
-	repo, err = dcm.getImageRepository("empty")
+	// Negative case: failed to execute docker images
+	dcm.Cmd.Setdir("/test/docker/images/error")
+	repo, err = dcm.getImageRepository("empty_image_repo")
+	assert.Equal(t, "", repo)
+	assert.EqualError(t, err, "exit status 1: error")
+
+	// Negative case: service image repo name is not in docker images list
+	dcm.Cmd.Setdir("/test/docker/images/ok")
+	repo, err = dcm.getImageRepository("empty_image_repo")
 	assert.Equal(t, "", repo)
 	assert.NoError(t, err)
 
+	// Positive case: success
+	dcm.Cmd.Setdir("/test/docker/images/ok")
 	repo, err = dcm.getImageRepository("ok")
 	assert.Equal(t, "dcmtest_ok", repo)
 	assert.NoError(t, err)
 }
 
 func TestBranchForOne(t *testing.T) {
+	// Negative case: get dcm branch failed at os.Chdir()
+
+	// Negative case: get service branch failed at os.Chdir()
+
+	// Negative case: git failed to get dcm branch
+
+	// Negative case: git failed to get service branch
+
+	// Positive case: success
 }
 
 func TestUpdate(t *testing.T) {
