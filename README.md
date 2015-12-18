@@ -1,11 +1,11 @@
-# DCM (Docker-Compose Manager)
+# DCM := "Docker-Compose Manager"
 
 [![Build Status](https://travis-ci.org/beanworks/dcm.svg)](https://travis-ci.org/beanworks/dcm)
 
 DCM is a wrapper for docker-compose. It enables one click setup, build && run process for a set
 micro services with docker. DCM also provides a couple of neat shorthand commands.
 
-*Supported Platform*
+**Supported Operating Systems**
 
 * Mac OS X, 64bit (tested)
 * Linux, 64bit
