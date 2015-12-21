@@ -5,6 +5,20 @@
 DCM is a wrapper for docker-compose. It enables one click setup, build && run process for a set
 micro services with docker. DCM also provides a couple of neat shorthand commands.
 
+**Prerequisites**
+* Linux Distros
+  * Docker
+  * Docker-Compose
+* Mac OS X / Windows
+  * Docker Toolbox
+
+OSX folks can also manually install docker:
+
+* VirtualBox (https://www.virtualbox.org/wiki/Downloads)
+* Docker Client `brew install docker`
+* Docker Machine `brew install docker-machine`
+* Docker Compose `brew install docker-compose`
+
 **Supported Operating Systems**
 
 * Mac OS X, 64bit (tested)
@@ -27,7 +41,7 @@ docker-compose config.
 ```
 git clone git@github.com:beanworks/dcm.git
 # Note here the name of the config needs to be same as DCM project name
-touch pi314.yml
+touch dcm/pi314.yml
 ```
 
 Then add the following lines to your bashrc/zshrc
@@ -232,6 +246,7 @@ Example:
 ## License
 
 Copyright (c) 2015, Beanworks Solutions Inc. <engpartnership@beanworks.com>
+
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
