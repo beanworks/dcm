@@ -245,8 +245,10 @@ Example:
 
 ## TODOs
 
-* Command line autocomplete
-* Working examples
+* Add command line autocomplete
+* Increase test coverage (currently at 40%) to at least 80%
+* Add coveralls (https://coveralls.io/) test coverage badge to README.md
+* Add working examples
   * Containerize an app that involves a couple of micro services
   * Create a YAML config for DCM to setup, build and run the app
 * Test on different OS
@@ -333,8 +335,6 @@ make clean
 # Cleanup and remove all the cross compile executables
 make cleanall
 ```
-
-#### Cross compile executables for different OS
 
 ## License
 
