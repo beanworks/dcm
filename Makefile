@@ -20,6 +20,9 @@ clean:
 	go clean ./...
 	rm -f bin/dcm
 
+cleanall: clean
+	rm -f bin/dcm-*
+
 cover:
 	go test -coverprofile c.out ./...
 	go tool cover -html=c.out

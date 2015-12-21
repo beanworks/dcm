@@ -243,10 +243,102 @@ Example:
     ...
 ```
 
+## TODOs
+
+* Command line autocomplete
+* Working examples
+  * Containerize an app that involves a couple of micro services
+  * Create a YAML config for DCM to setup, build and run the app
+* Test on different OS
+  * Linux Distros
+  * FreeBSD
+  * Windows Cygwin
+
+## Contributing
+
+All code needs to be formatted with `gofmt`. `goimports` is more preferred as it also auto-generate
+and format import section.
+
+We suggest contributors use vim-go or GoSublime if you are vim lovers or sublime folks. If you use
+neither of those editors, having a editor or IDE respects EditorConfig and automatically invoke
+`gofmt` or `goimports` on save is highly recommended.
+
+#### Make a development copy
+
+Make sure you have Go 1.4+ installed and GOPATH set (https://golang.org/doc/code.html).
+
+```
+git clone git@github.com:beanworks/dcm.git $GOPATH/src/github.com/beanworks/dcm
+cd $GOPATH/src/github.com/beanworks/dcm
+```
+
+Run command `tree -a -I .git` you will see the following folder and file structure:
+
+```
+.
+├── .editorconfig
+├── .gitignore
+├── .travis.yml
+├── LICENSE
+├── Makefile
+├── README.md
+├── bin
+│   ├── dcm-darwin-amd64
+│   ├── dcm-freebsd-amd64
+│   ├── dcm-linux-amd64
+│   └── dcm-windows-amd64.exe
+├── dcm.sh
+├── src
+│   ├── cmd.go
+│   ├── cmd_test.go
+│   ├── config.go
+│   ├── config_test.go
+│   ├── dcm.go
+│   ├── dcm_test.go
+│   ├── main.go
+│   ├── util.go
+│   └── util_test.go
+└── srv
+    └── .gitignore
+```
+
+All the source files are located in `src` folder.
+
+#### Running unit tests
+
+```
+# Run the whole test suite
+make test
+# Run tests in verbose mode
+make vtest
+```
+
+#### Generating test coverage report
+
+```
+make cover
+```
+
+#### Build executables
+
+```
+# Build development executable
+make
+# Run development executable
+bin/dcm
+# Cross compile executables for different OS
+make cross
+# Cleanup
+make clean
+# Cleanup and remove all the cross compile executables
+make cleanall
+```
+
+#### Cross compile executables for different OS
+
 ## License
 
 Copyright (c) 2015, Beanworks Solutions Inc. <engpartnership@beanworks.com>
-
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
