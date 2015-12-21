@@ -38,7 +38,7 @@ OSX folks can also manually install docker:
 To install DCM, first checkout DCM on your local file system, and create an enhanced version
 docker-compose config.
 
-```
+```shell
 git clone git@github.com:beanworks/dcm.git
 # Note here the name of the config needs to be same as DCM project name
 touch dcm/pi314.yml
@@ -46,7 +46,7 @@ touch dcm/pi314.yml
 
 Then add the following lines to your bashrc/zshrc
 
-```
+```shell
 export DCM_DIR="/path/to/your/dcm/dir"
 export DCM_PROJECT="pi314"
 
@@ -68,7 +68,7 @@ All DCM specific options in the YAML configuration file are under `serviceName.l
 `dcm setup` command will read this option and clone the service's git repository. DCM will
 place the repo at `$DCM_DIR/srv/$DCM_PROJECT/[service name]`.
 
-```
+```yaml
 service:
   labels:
     dcm.repository: git@github.com:username/repository.git
@@ -81,7 +81,7 @@ If this option is given, `dcm run` command will run the init script automaticall
 
 The value of the `dcm.initscript` is relative to the service's folder.
 
-```
+```yaml
 service:
   build: "./srv/project/service/"
   labels:
@@ -95,7 +95,7 @@ In the example above, DCM will the init script `$DCM_DIR/srv/project/service/dcm
 IF this option is given, DCM will switch to the git branch provided right after it clones
 the repo during the setup process.
 
-```
+```yaml
 service:
   labels:
     dcm.branch: default-branch-name
@@ -106,7 +106,7 @@ service:
 For your first time setup, run the following commands. They will checkout all the repositories
 for different micro services, build all the images and spin up the docker containers.
 
-```
+```shell
 dcm setup && dcm run
 ```
 
@@ -117,19 +117,19 @@ Generally in your day to day development process, you should only need to run ei
 
 First, uninstall DCM from bash/zsh
 
-```
+```shell
 dcm unload
 ```
 
 Then, pull the latest version DCM with git
 
-```
+```shell
 git pull
 ```
 
 Lastly, source bashrc/zshrc/profile again to reinstall DCM
 
-```
+```shell
 source ~/.profile
 # or
 source ~/.bash_profile
@@ -143,7 +143,7 @@ zsh
 
 #### 1. Create YAML configuration files for multiple instances
 
-```
+```shell
 touch instance1.yml instance2.yml instance3.yml
 ```
 
@@ -157,7 +157,7 @@ for instance3.yml.
 
 #### 2. Initial setup, build && run
 
-```
+```shell
 export DCM_PROJECT=instance1
 dcm setup && dcm run
 
@@ -170,7 +170,7 @@ dcm setup && dcm run
 
 Note that you can always set the env variable within the same command like this:
 
-```
+```shell
 DCM_PROJECT=instance1 dcm setup
 DCM_PROJECT=instance1 dcm run
 ```
@@ -179,7 +179,7 @@ The choices are yours :)
 
 #### 3. Subsequent rebuild && rerun
 
-```
+```shell
 export DCM_PROJECT=instance1
 dcm build && dcm run
 
@@ -194,7 +194,7 @@ dcm build && dcm run
 
 The follow menu can be viewed in command line by entering `dcm` or `dcm help` commands.
 
-```
+```text
 Docker Compose Manager
 
 Usage:
@@ -267,14 +267,14 @@ neither of those editors, having a editor or IDE respects EditorConfig and autom
 
 Make sure you have Go 1.4+ installed and GOPATH set (https://golang.org/doc/code.html).
 
-```
+```shell
 git clone git@github.com:beanworks/dcm.git $GOPATH/src/github.com/beanworks/dcm
 cd $GOPATH/src/github.com/beanworks/dcm
 ```
 
 Run command `tree -a -I .git` you will see the following folder and file structure:
 
-```
+```text
 .
 ├── .editorconfig
 ├── .gitignore
@@ -306,7 +306,7 @@ All the source files are located in `src` folder.
 
 #### Running unit tests
 
-```
+```shell
 # Run the whole test suite
 make test
 # Run tests in verbose mode
@@ -315,13 +315,13 @@ make vtest
 
 #### Generating test coverage report
 
-```
+```shell
 make cover
 ```
 
 #### Build executables
 
-```
+```shell
 # Build development executable
 make
 # Run development executable
