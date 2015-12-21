@@ -56,7 +56,17 @@ func (c *CmdMock) Run() error {
 			return errors.New("exit status 1")
 		}
 		if len(c.args) == 3 && c.args[0] == "rev-parse" &&
-			c.dir == "/test/git/rev-parse/dcm/error" {
+			c.dir == "/test/dcm/git/rev-parse/error" {
+			return errors.New("exit status 1")
+		}
+		if len(c.args) == 2 && c.args[0] == "checkout" {
+			switch c.args[1] {
+			case "master", "test-dcm-update-error":
+				return errors.New("exit status 1")
+			}
+		}
+		if len(c.args) == 1 && c.args[0] == "pull" &&
+			c.dir == "/test/dcm/git/pull/error" {
 			return errors.New("exit status 1")
 		}
 	case "docker-compose":
@@ -491,7 +501,7 @@ func TestBranchForOne(t *testing.T) {
 
 	// Negative case: git failed to get dcm branch
 	dcm.Config.Dir = dir
-	dcm.Cmd.Setdir("/test/git/rev-parse/dcm/error")
+	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/error")
 	code, err = dcm.branchForOne("dcm")
 
 	assert.Equal(t, 1, code)
@@ -499,7 +509,7 @@ func TestBranchForOne(t *testing.T) {
 
 	// Negative case: git failed to get service branch
 	dcm.Config.Srv = dir
-	dcm.Cmd.Setdir("/test/git/rev-parse/dcm/error")
+	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/error")
 	code, err = dcm.branchForOne(path.Base(srv))
 
 	assert.Equal(t, 1, code)
@@ -507,7 +517,7 @@ func TestBranchForOne(t *testing.T) {
 
 	// Positive case: success
 	dcm.Config.Dir = dir
-	dcm.Cmd.Setdir("/test/git/rev-parse/dcm/ok")
+	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/ok")
 	code, err = dcm.branchForOne("dcm")
 
 	assert.Equal(t, 0, code)
@@ -515,10 +525,121 @@ func TestBranchForOne(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	dir, err := ioutil.TempDir("", "dcm")
+	require.Nil(t, err)
+	srv, err := ioutil.TempDir(dir, "service")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	service := path.Base(srv)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
+	fixtures := []struct {
+		name, srv, dir string
+		config         yamlConfig
+		code           int
+		err            error
+	}{
+		{
+			name: "Negative case: failed to os.Chdir()",
+			dir:  "/test/dcm/update",
+			srv:  "/test/dcm/dir/srv/testproj",
+			config: yamlConfig{
+				"invalid": yamlConfig{
+					"folder": "test",
+				},
+			},
+			code: 1,
+			err:  errors.New("chdir /test/dcm/dir/srv/testproj/invalid: no such file or directory"),
+		},
+		{
+			name: "Negative case: cannot read default branch config, use master instead, and got `git checkout` error",
+			dir:  "/test/dcm/update",
+			srv:  dir,
+			config: yamlConfig{
+				service: yamlConfig{
+					"labels": yamlConfig{
+						"dcm.some.other": "label",
+					},
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1"),
+		},
+		{
+			name: "Negative case: failed to execute `git checkout`",
+			dir:  "/test/dcm/update",
+			srv:  dir,
+			config: yamlConfig{
+				service: yamlConfig{
+					"labels": yamlConfig{
+						"dcm.branch": "test-dcm-update-error",
+					},
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1"),
+		},
+		{
+			name: "Negative case: failed to execute `git pull`",
+			dir:  "/test/dcm/git/pull/error",
+			srv:  dir,
+			config: yamlConfig{
+				service: yamlConfig{
+					"labels": yamlConfig{
+						"dcm.branch": "test-dcm-update-ok",
+					},
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1"),
+		},
+		{
+			name: "Positive case: success",
+			dir:  "/test/dcm/update",
+			srv:  dir,
+			config: yamlConfig{
+				service: yamlConfig{
+					"labels": yamlConfig{
+						"dcm.branch": "test-dcm-update-ok",
+					},
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+	}
+
+	for n, test := range fixtures {
+		dcm.Cmd.Setdir(test.dir)
+		dcm.Config.Srv = test.srv
+		dcm.Config.Config = test.config
+		code, err := dcm.Update()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
 }
 
 func TestPurgeImages(t *testing.T) {
+	// Negative case: failed to get image repo name
+
+	// Negative case: failed to execute `docker rmi`
+
+	// Positive case: success
 }
 
 func TestPurgeContainers(t *testing.T) {
+	// Negative case: failed to get container id
+
+	// Negative case: failed to execute `docker kill`
+
+	// Negative case: failed to execute `docker rm`
+
+	// Positive case: success
 }
