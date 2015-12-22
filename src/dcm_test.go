@@ -643,3 +643,14 @@ func TestPurgeContainers(t *testing.T) {
 
 	// Positive case: success
 }
+
+func TestUsage(t *testing.T) {
+	out := helperTestOsStdout(t, func() {
+		dcm := NewDcm(NewConfig(), []string{})
+		dcm.Usage()
+	})
+
+	assert.Contains(t, out, "Docker Compose Manager\n")
+	assert.Contains(t, out, "Usage:\n")
+	assert.Contains(t, out, "Example:\n")
+}
