@@ -134,6 +134,92 @@ func (c *CmdMock) Out() ([]byte, error) {
 
 // ========== Here starts the real tests for Dcm ==========
 
+func TestCommand(t *testing.T) {
+	var (
+		code int
+		err  error
+	)
+
+	dir, err := ioutil.TempDir("", "dcm")
+	require.Nil(t, err)
+	defer os.Remove(dir)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Config.Project = "dcmtest"
+	dcm.Config.Dir = dir
+	dcm.Cmd = &CmdMock{}
+	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/ok")
+
+	tests := []struct {
+		name string
+		args []string
+		code int
+	}{
+		{
+			name: "No args passed, print usage, and return code 1",
+			args: []string{},
+			code: 1,
+		},
+		{
+			name: "test command `dcm help`",
+			args: []string{"help"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm setup`",
+			args: []string{"setup"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm run`",
+			args: []string{"run"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm build`",
+			args: []string{"build"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm dir`",
+			args: []string{"dir"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm shell`",
+			args: []string{"shell", "ok"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm branch`",
+			args: []string{"branch", "dcm"},
+			code: 0,
+		},
+		{
+			name: "test command `dcm update`",
+			args: []string{"update"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm purge`",
+			args: []string{"purge"},
+			code: 0,
+		},
+		{
+			name: "Invalid args passed, print usage, and return code 127",
+			args: []string{"invalid"},
+			code: 127,
+		},
+	}
+
+	for n, test := range tests {
+		dcm.Args = test.args
+		code, err = dcm.Command()
+		assert.Equal(t, code, test.code, "[%d: %s] Incorrect error code returned", n, test.name)
+		assert.Nil(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+	}
+}
+
 func TestSetup(t *testing.T) {
 	fixtures := []struct {
 		name   string
@@ -368,6 +454,13 @@ func TestDir(t *testing.T) {
 	})
 	assert.Equal(t, dir, out)
 
+	// Test Dir() with args, not exists, fall back to dcm.Config.Dir
+	out = helperTestOsStdout(t, func() {
+		dcm.Config.Srv = dir
+		dcm.Dir("not_exists")
+	})
+	assert.Equal(t, dir, out)
+
 	// Test Dir() with args
 	out = helperTestOsStdout(t, func() {
 		dcm.Config.Srv = dir
@@ -433,10 +526,6 @@ func TestShell(t *testing.T) {
 }
 
 func TestGetContainerId(t *testing.T) {
-	dcm := NewDcm(NewConfig(), []string{})
-	dcm.Cmd = &CmdMock{}
-	dcm.Config.Project = "dcmtest"
-
 	fixtures := []struct {
 		name, service, cid string
 		err                error
@@ -461,6 +550,10 @@ func TestGetContainerId(t *testing.T) {
 		},
 	}
 
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
+
 	for n, test := range fixtures {
 		cid, err := dcm.getContainerId(test.service)
 		assert.Equal(t, test.cid, cid, "[%d: %s] Incorrect docker container ID returned", n, test.name)
@@ -473,10 +566,6 @@ func TestGetContainerId(t *testing.T) {
 }
 
 func TestGetImageRepository(t *testing.T) {
-	dcm := NewDcm(NewConfig(), []string{})
-	dcm.Cmd = &CmdMock{}
-	dcm.Config.Project = "dcmtest"
-
 	fixtures := []struct {
 		name, dir, service, repo string
 		err                      error
@@ -503,6 +592,10 @@ func TestGetImageRepository(t *testing.T) {
 			err:     nil,
 		},
 	}
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
 
 	for n, test := range fixtures {
 		dcm.Cmd.Setdir(test.dir)
@@ -673,10 +766,6 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestPurgeImages(t *testing.T) {
-	dcm := NewDcm(NewConfig(), []string{})
-	dcm.Cmd = &CmdMock{}
-	dcm.Config.Project = "dcmtest"
-
 	fixtures := []struct {
 		name, dir string
 		config    yamlConfig
@@ -718,6 +807,10 @@ func TestPurgeImages(t *testing.T) {
 		},
 	}
 
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
+
 	for n, test := range fixtures {
 		dcm.Cmd.Setdir(test.dir)
 		dcm.Config.Config = test.config
@@ -732,10 +825,6 @@ func TestPurgeImages(t *testing.T) {
 }
 
 func TestPurgeContainers(t *testing.T) {
-	dcm := NewDcm(NewConfig(), []string{})
-	dcm.Cmd = &CmdMock{}
-	dcm.Config.Project = "dcmtest"
-
 	fixtures := []struct {
 		name   string
 		config yamlConfig
@@ -783,6 +872,10 @@ func TestPurgeContainers(t *testing.T) {
 			err:  nil,
 		},
 	}
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
 
 	for n, test := range fixtures {
 		dcm.Config.Config = test.config
