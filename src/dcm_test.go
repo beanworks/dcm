@@ -83,6 +83,18 @@ func (c *CmdMock) Run() error {
 			c.args[2] == "dcmtest_failed_to_run_docker_exec_1" {
 			return errors.New("exit status 1")
 		}
+		if len(c.args) == 2 && c.args[0] == "rmi" &&
+			c.args[1] == "dcmtest_bad" {
+			return errors.New("exit status 1")
+		}
+		if len(c.args) == 2 && c.args[0] == "kill" &&
+			c.args[1] == "dcmtest_docker_kill_error_1" {
+			return errors.New("exit status 1")
+		}
+		if len(c.args) == 3 && c.args[0] == "rm" &&
+			c.args[2] == "dcmtest_docker_rm_error_1" {
+			return errors.New("exit status 1")
+		}
 	}
 	return nil
 }
@@ -92,18 +104,27 @@ func (c *CmdMock) Out() ([]byte, error) {
 	case "docker":
 		if len(c.args) == 4 && c.args[0] == "ps" {
 			switch c.args[3] {
+			case "name=dcmtest_empty_container_id_":
+				return []byte(""), nil
 			case "name=dcmtest_ok_":
 				return []byte("dcmtest_ok_1"), nil
 			case "name=dcmtest_failed_to_run_docker_exec_":
 				return []byte("dcmtest_failed_to_run_docker_exec_1"), nil
+			case "name=dcmtest_docker_kill_error_":
+				return []byte("dcmtest_docker_kill_error_1"), nil
+			case "name=dcmtest_docker_rm_error_":
+				return []byte("dcmtest_docker_rm_error_1"), nil
 			default:
 				return []byte("error"), errors.New("exit status 1")
 			}
 		}
 		if len(c.args) == 1 && c.args[0] == "images" {
-			if c.dir == "/test/docker/images/error" {
+			switch c.dir {
+			case "/test/docker/images/error":
 				return []byte("error"), errors.New("exit status 1")
-			} else {
+			case "/test/docker/images/remove/error":
+				return []byte("dcmtest_bad foobar bazqux"), nil
+			default:
 				return []byte("dcmtest_ok foobar bazqux"), nil
 			}
 		}
@@ -121,7 +142,7 @@ func TestSetup(t *testing.T) {
 		err    error
 	}{
 		{
-			name: "Negative case for failing reading git repository config",
+			name: "Negative case: failed to read git repository config",
 			config: yamlConfig{
 				"service": yamlConfig{"build": "./build/dir"},
 			},
@@ -129,7 +150,7 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("Error reading git repository config for service [service]"),
 		},
 		{
-			name: "Negative case for failing cloning git repository",
+			name: "Negative case: failed to clone git repository",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{"dcm.repository": "test-dcm-setup-error"},
@@ -139,7 +160,7 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("Error cloning git repository for service [service]: exit status 1"),
 		},
 		{
-			name: "Negative case for failing switching to pre-configured git branch",
+			name: "Negative case: failed to switch to pre-configured git branch",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -152,7 +173,7 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("exit status 1"),
 		},
 		{
-			name: "Positive case, success",
+			name: "Positive case: success",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -210,14 +231,14 @@ func TestDoForEachService(t *testing.T) {
 		},
 	}
 
-	// Negative test case for failing with panic
+	// Negative case: for failing with panic
 	dcm.Config.Config = fixtureBad
 	doSrv = func(service string, configs yamlConfig) (int, error) {
 		return 0, nil
 	}
 	assert.Panics(t, func() { dcm.doForEachService(doSrv) })
 
-	// Negative test case for failing with error
+	// Negative case: for failing with error
 	dcm.Config.Config = fixtureGood
 	doSrv = func(service string, configs yamlConfig) (int, error) {
 		return 1, errors.New("Error")
@@ -227,7 +248,7 @@ func TestDoForEachService(t *testing.T) {
 	assert.Equal(t, 1, code)
 	assert.Error(t, err)
 
-	// Positive test case, success
+	// Positive case: success
 	dcm.Config.Config = fixtureGood
 	doSrv = func(service string, configs yamlConfig) (int, error) {
 		return 0, nil
@@ -244,12 +265,12 @@ func TestRunExecute(t *testing.T) {
 		code      int
 	}{
 		{
-			name: "Negative case for failing to run docker-compose command",
+			name: "Negative case: failed to run docker-compose command",
 			dir:  "/test/dcm/run/execute/error",
 			code: 1,
 		},
 		{
-			name: "Positive case, success",
+			name: "Positive case: success",
 			dir:  "/test/dcm/run/execute/ok",
 			code: 0,
 		},
@@ -278,7 +299,7 @@ func TestRunInit(t *testing.T) {
 		err    error
 	}{
 		{
-			name: "Negative case for config has no init script",
+			name: "Negative case: config has no init script",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -290,7 +311,7 @@ func TestRunInit(t *testing.T) {
 			err:  nil,
 		},
 		{
-			name: "Negative case for failing to exuecute init script",
+			name: "Negative case: failed to exuecute init script",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -302,7 +323,7 @@ func TestRunInit(t *testing.T) {
 			err:  errors.New("Error executing init script [test/dcm/run/init/error] for service [service]: exit status 1"),
 		},
 		{
-			name: "Positive case, success",
+			name: "Positive case: success",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -392,82 +413,107 @@ func TestShell(t *testing.T) {
 
 	// Negative case: failed when there is no arg passed
 	code, err = dcm.Shell()
-
 	assert.Equal(t, 1, code)
 	assert.EqualError(t, err, "Error: no service name specified.")
 
 	// Negative case: failed to get docker container id
 	code, err = dcm.Shell("failed_to_get_container_id")
-
 	assert.Equal(t, 1, code)
 	assert.EqualError(t, err, "exit status 1: error")
 
 	// Negative case: failed to run docker exec command
 	code, err = dcm.Shell("failed_to_run_docker_exec")
-
 	assert.Equal(t, 1, code)
 	assert.EqualError(t, err, "exit status 1")
 
 	// Positive case: success
 	code, err = dcm.Shell("ok")
-
 	assert.Equal(t, 0, code)
 	assert.NoError(t, err)
 }
 
 func TestGetContainerId(t *testing.T) {
-	var (
-		cid string
-		err error
-	)
-
 	dcm := NewDcm(NewConfig(), []string{})
 	dcm.Cmd = &CmdMock{}
 	dcm.Config.Project = "dcmtest"
 
-	// Negative case: failed to get docker container id
-	cid, err = dcm.getContainerId("docker_ps_error")
-	assert.Equal(t, "", cid)
-	assert.EqualError(t, err, "exit status 1: error")
+	fixtures := []struct {
+		name, service, cid string
+		err                error
+	}{
+		{
+			name:    "Negative case: failed to get docker container id",
+			service: "docker_ps_error",
+			cid:     "",
+			err:     errors.New("exit status 1: error"),
+		},
+		{
+			name:    "Negative case: got an empty container id",
+			service: "empty_container_id",
+			cid:     "",
+			err:     errors.New("Error: no running container name starts with dcmtest_empty_container_id_"),
+		},
+		{
+			name:    "Positive case: success",
+			service: "ok",
+			cid:     "dcmtest_ok_1",
+			err:     nil,
+		},
+	}
 
-	// Negative case: got an empty container id
-	cid, err = dcm.getContainerId("empty_container_id")
-	assert.Equal(t, "", cid)
-	assert.EqualError(t, err, "exit status 1: error")
-
-	// Positive case: success
-	cid, err = dcm.getContainerId("ok")
-	assert.Equal(t, "dcmtest_ok_1", cid)
-	assert.NoError(t, err)
+	for n, test := range fixtures {
+		cid, err := dcm.getContainerId(test.service)
+		assert.Equal(t, test.cid, cid, "[%d: %s] Incorrect docker container ID returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
 }
 
 func TestGetImageRepository(t *testing.T) {
-	var (
-		repo string
-		err  error
-	)
-
 	dcm := NewDcm(NewConfig(), []string{})
 	dcm.Cmd = &CmdMock{}
 	dcm.Config.Project = "dcmtest"
 
-	// Negative case: failed to execute docker images
-	dcm.Cmd.Setdir("/test/docker/images/error")
-	repo, err = dcm.getImageRepository("empty_image_repo")
-	assert.Equal(t, "", repo)
-	assert.EqualError(t, err, "exit status 1: error")
+	fixtures := []struct {
+		name, dir, service, repo string
+		err                      error
+	}{
+		{
+			name:    "Negative case: failed to execute docker images",
+			dir:     "/test/docker/images/error",
+			service: "empty_image_repo",
+			repo:    "",
+			err:     errors.New("exit status 1: error"),
+		},
+		{
+			name:    "Negative case: service image repo name is not in docker images list",
+			dir:     "/test/docker/images/ok",
+			service: "empty_image_repo",
+			repo:    "",
+			err:     nil,
+		},
+		{
+			name:    "Positive case: success",
+			dir:     "/test/docker/images/ok",
+			service: "ok",
+			repo:    "dcmtest_ok",
+			err:     nil,
+		},
+	}
 
-	// Negative case: service image repo name is not in docker images list
-	dcm.Cmd.Setdir("/test/docker/images/ok")
-	repo, err = dcm.getImageRepository("empty_image_repo")
-	assert.Equal(t, "", repo)
-	assert.NoError(t, err)
-
-	// Positive case: success
-	dcm.Cmd.Setdir("/test/docker/images/ok")
-	repo, err = dcm.getImageRepository("ok")
-	assert.Equal(t, "dcmtest_ok", repo)
-	assert.NoError(t, err)
+	for n, test := range fixtures {
+		dcm.Cmd.Setdir(test.dir)
+		repo, err := dcm.getImageRepository(test.service)
+		assert.Equal(t, test.repo, repo, "[%d: %s] Incorrect docker image repository name returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
 }
 
 func TestBranchForOne(t *testing.T) {
@@ -627,21 +673,127 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestPurgeImages(t *testing.T) {
-	// Negative case: failed to get image repo name
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
 
-	// Negative case: failed to execute `docker rmi`
+	fixtures := []struct {
+		name, dir string
+		config    yamlConfig
+		code      int
+		err       error
+	}{
+		{
+			name: "Negative case: failed to get image repo name",
+			dir:  "/test/docker/images/error",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"test": "purgeImages",
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1: error"),
+		},
+		{
+			name: "Negative case: failed to execute `docker rmi`",
+			dir:  "/test/docker/images/remove/error",
+			config: yamlConfig{
+				"bad": yamlConfig{
+					"test": "purgeImages",
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1"),
+		},
+		{
+			name: "Positive case: success",
+			dir:  "/test/docker/images/ok",
+			config: yamlConfig{
+				"ok": yamlConfig{
+					"test": "purgeImages",
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+	}
 
-	// Positive case: success
+	for n, test := range fixtures {
+		dcm.Cmd.Setdir(test.dir)
+		dcm.Config.Config = test.config
+		code, err := dcm.purgeImages()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
 }
 
 func TestPurgeContainers(t *testing.T) {
-	// Negative case: failed to get container id
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+	dcm.Config.Project = "dcmtest"
 
-	// Negative case: failed to execute `docker kill`
+	fixtures := []struct {
+		name   string
+		config yamlConfig
+		code   int
+		err    error
+	}{
+		{
+			name: "Negative case: failed to get container id",
+			config: yamlConfig{
+				"docker_ps_error": yamlConfig{
+					"test": "purgeContainers",
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1: error"),
+		},
+		{
+			name: "Negative case: failed to execute `docker kill`",
+			config: yamlConfig{
+				"docker_kill_error": yamlConfig{
+					"test": "purgeContainers",
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1"),
+		},
+		{
+			name: "Negative case: failed to execute `docker rm`",
+			config: yamlConfig{
+				"docker_rm_error": yamlConfig{
+					"test": "purgeContainers",
+				},
+			},
+			code: 1,
+			err:  errors.New("exit status 1"),
+		},
+		{
+			name: "Positive case: success",
+			config: yamlConfig{
+				"ok": yamlConfig{
+					"test": "purgeContainers",
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+	}
 
-	// Negative case: failed to execute `docker rm`
-
-	// Positive case: success
+	for n, test := range fixtures {
+		dcm.Config.Config = test.config
+		code, err := dcm.purgeContainers()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
 }
 
 func TestUsage(t *testing.T) {
