@@ -248,8 +248,6 @@ Example:
 
 * Support docker hub images
 * Add command line autocomplete
-* Increase test coverage (currently at 89%) to 95%
-* Add coveralls (https://coveralls.io/) test coverage badge to README.md
 * Add working examples
   * Containerize an app that involves a couple of micro services
   * Create a YAML config for DCM to setup, build and run the app
@@ -257,6 +255,7 @@ Example:
   * Linux Distros
   * FreeBSD
   * Windows Cygwin
+* Increase test coverage (currently at 89%) to 95%
 
 ## Contributing
 
