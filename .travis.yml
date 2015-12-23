@@ -4,14 +4,17 @@ go:
   - 1.5
 
 before_install:
-  - go get -v golang.org/x/tools/cmd/vet
-  - go get -v github.com/golang/lint/golint
+  - go get golang.org/x/tools/cmd/vet
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+  - go get github.com/golang/lint/golint
 
 install:
   - go install -race -v std
-  - go get -race -t -v ./...
+  - go get -race -t ./...
   - go install -race -v ./...
 
 script:
   - $HOME/gopath/bin/golint .
   - make test
+  - goveralls -service=dcm
