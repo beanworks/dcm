@@ -27,6 +27,10 @@ cover:
 	go test -coverprofile c.out ./...
 	go tool cover -html=c.out
 
+coveralls:
+	go test -covermode=count -coverprofile c.out ./...
+	goveralls -service=travis-ci -coverprofile=c.out
+
 bin/dcm: src/*.go
 	go get ./...
 	go build -o bin/dcm ./src
