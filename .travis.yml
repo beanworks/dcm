@@ -17,4 +17,4 @@ install:
 script:
   - $HOME/gopath/bin/golint .
   - make test
-  - goveralls -service=dcm
+  - goveralls -service=travis-ci
