@@ -30,3 +30,19 @@ dcm() {
       ;;
   esac
 }
+
+_dcm_complete() {
+  cur=${COMP_WORDS[COMP_CWORD]}
+  case $COMP_CWORD in
+    1)
+      use="help h setup run r build b shell sh purge rm branch br goto gt cd update u unload ul"
+      ;;
+    # 2)
+    #   use=`goe list`
+    #   ;;
+  esac
+
+  COMPREPLY=( $( compgen -W "$use" -- $cur ) )
+}
+
+complete -o default -o nospace -F _dcm_complete dcm
