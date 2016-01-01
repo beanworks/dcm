@@ -1,3 +1,4 @@
+# Entry point of the dcm command
 dcm() {
   local OS=$(uname -s)
   local ARCH=$(uname -m)
@@ -31,18 +32,32 @@ dcm() {
   esac
 }
 
+# DCM command autocomplete handler
 _dcm_complete() {
-  cur=${COMP_WORDS[COMP_CWORD]}
+  local cur=${COMP_WORDS[COMP_CWORD]}
+  local use=""
+
   case $COMP_CWORD in
     1)
-      use="help h setup run r build b shell sh purge rm branch br goto gt cd update u unload ul"
+      use="help setup run build shell purge branch goto update unload"
       ;;
-    # 2)
-    #   use=`goe list`
-    #   ;;
+    2)
+      local prev_word=${COMP_WORDS[1]}
+      case $prev_word in
+        run|r)
+          use="execute init build start stop restart up"
+          ;;
+        purge|rm)
+          use="images containers all"
+          ;;
+        shell|sh|branch|br|goto|gt|cd|update|u)
+          use=`dcm list`
+          ;;
+      esac
+      ;;
   esac
 
   COMPREPLY=( $( compgen -W "$use" -- $cur ) )
 }
 
-complete -o default -o nospace -F _dcm_complete dcm
+complete -o default -F _dcm_complete dcm
