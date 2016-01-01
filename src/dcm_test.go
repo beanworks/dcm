@@ -350,6 +350,69 @@ func TestDoForEachService(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRun(t *testing.T) {
+	var (
+		code int
+		err  error
+	)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
+	tests := []struct {
+		name string
+		args []string
+		code int
+	}{
+		{
+			name: "No args passed, run `dcm run up` as default option",
+			args: []string{},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run execute`",
+			args: []string{"execute"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run init`",
+			args: []string{"init"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run build`",
+			args: []string{"build"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run start`",
+			args: []string{"start"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run stop`",
+			args: []string{"stop"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run restart`",
+			args: []string{"restart"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run up`",
+			args: []string{"up"},
+			code: 0,
+		},
+	}
+
+	for n, test := range tests {
+		code, err = dcm.Run(test.args...)
+		assert.Equal(t, code, test.code, "[%d: %s] Incorrect error code returned", n, test.name)
+		assert.Nil(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+	}
+}
+
 func TestRunExecute(t *testing.T) {
 	fixtures := []struct {
 		name, dir string
@@ -767,6 +830,49 @@ func TestUpdate(t *testing.T) {
 		} else {
 			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
 		}
+	}
+}
+
+func TestPurge(t *testing.T) {
+	var (
+		code int
+		err  error
+	)
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
+	tests := []struct {
+		name string
+		args []string
+		code int
+	}{
+		{
+			name: "No args passed, run `dcm purge containers` as default option",
+			args: []string{},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm purge images`",
+			args: []string{"images"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run containers`",
+			args: []string{"containers"},
+			code: 0,
+		},
+		{
+			name: "dcm command `dcm run all`",
+			args: []string{"all"},
+			code: 0,
+		},
+	}
+
+	for n, test := range tests {
+		code, err = dcm.Purge(test.args...)
+		assert.Equal(t, code, test.code, "[%d: %s] Incorrect error code returned", n, test.name)
+		assert.Nil(t, err, "[%d: %s] Non-nil error returned", n, test.name)
 	}
 }
 
