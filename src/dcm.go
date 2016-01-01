@@ -47,6 +47,8 @@ func (d *Dcm) Command() (int, error) {
 		return d.Update(moreArgs...)
 	case "purge", "rm":
 		return d.Purge(moreArgs...)
+	case "list", "l":
+		return d.List()
 	default:
 		d.Usage()
 		return 127, nil
@@ -353,6 +355,13 @@ func (d *Dcm) purgeAll() (int, error) {
 		return code, err
 	}
 	return d.Purge("images")
+}
+
+func (d *Dcm) List() (int, error) {
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		fmt.Fprintln(os.Stdout, service)
+		return 0, nil
+	})
 }
 
 func (d *Dcm) Usage() {

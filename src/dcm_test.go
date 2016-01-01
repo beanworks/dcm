@@ -206,6 +206,11 @@ func TestCommand(t *testing.T) {
 			code: 0,
 		},
 		{
+			name: "dcm command `dcm list`",
+			args: []string{"list"},
+			code: 0,
+		},
+		{
 			name: "Invalid args passed, print usage, and return code 127",
 			args: []string{"invalid"},
 			code: 127,
@@ -887,6 +892,17 @@ func TestPurgeContainers(t *testing.T) {
 			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
 		}
 	}
+}
+
+func TestList(t *testing.T) {
+	out := helperTestOsStdout(t, func() {
+		dcm := NewDcm(NewConfig(), []string{})
+		dcm.Config.Config = yamlConfig{
+			"service": yamlConfig{},
+		}
+		dcm.List()
+	})
+	assert.Equal(t, "service\n", out)
 }
 
 func TestUsage(t *testing.T) {
