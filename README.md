@@ -199,49 +199,38 @@ The follow menu can be viewed in command line by entering `dcm` or `dcm help` co
 Docker Compose Manager
 
 Usage:
-  dcm help                Show this message
-                          shorthand ver.: `dcm h`
-  dcm setup               Check out all the repositories for API, UI and services
+  dcm help                Show this message.
+  dcm setup               Git checkout all the repositories for the services.
   dcm run [<args>]        Run docker-compose commands. If <args> is not given, by
                           default DCM will run `up` command.
                           <args>: up, build, start, stop, restart
-                          shorthand ver.: `dcm r [<args>]`
-  dcm run build           Run build command that (re)create all the service images
-                          shorthand ver.: `dcm build` or `dcm b`
-  dcm shell <service>     Log into a given service container
-                          <service>: api, ui, postgres, mongo, redis, nginx, php
-                          shorthand ver.: `dcm sh <service>`
+  dcm build               Run build command that (re)create all the service images.
+                          Shorthand version of `dcm run build`.
+  dcm shell <service>     Log into a given service container.
   dcm purge [<type>]      Remove either all the containers or all the images or
                           everything. If <type> is not given, by default DCM will
-                          purge everything
-                          <type>: images|img, containers|con, all
-                          shorthand ver.: `dcm rm [<type>]`
-  dcm branch <service>    Display the current branch for the given service name
-                          <service>: api, ui, postgres, mongo, redis, nginx, php
-                          shorthand ver.: `dcm br <service>`
+                          purge everything.
+                          <type>: images, containers, all
+  dcm branch <service>    Display the current branch for the given service name.
   dcm goto [<service>]    Go to the service's folder. If <service> is not given,
-                          by default DCM will go to $DCM_DIR
-                          <service>: api, ui, postgres, mongo, redis, nginx, php
-                          shorthand ver.: `dcm gt [<service>]`
-  dcm update [<service>]  Update DCM and dependent services (PostgrSQL, MongoDB,
-                          Redis, Nginx and Base PHP). If <service> is not given,
-                          by default DCM will update everything except api and ui.
-                          <service>: postgres, mongo, redis, nginx, php
-                          shorthand ver.: `dcm u`
+                          by default DCM will go to $DCM_DIR.
+  dcm update <service>    Update DCM and the services.
+  dcm list                list all the available services
 
 Example:
   Initial setup
     dcm setup
     dcm run
 
-  Rebuild API or UI after switching branch
+  Rebuild
     dcm build
     dcm run
 
-  Log into different service containers
-    dcm shell api
-    dcm shell ui
-    ...
+  Or only Rerun
+    dcm run
+
+  Log into a service's container
+    dcm shell service_name
 ```
 
 ## TODOs
@@ -255,7 +244,7 @@ Example:
   * Linux Distros
   * FreeBSD
   * Windows Cygwin
-* Increase test coverage (currently at 89%) to 95%
+* Increase test coverage (currently at 93%) to 95%
 
 ## Contributing
 
@@ -339,7 +328,7 @@ make cleanall
 
 ## License
 
-Copyright (c) 2015, Beanworks Solutions Inc. <engpartnership@beanworks.com>
+Copyright (c) 2016, Beanworks Solutions Inc. <engpartnership@beanworks.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
