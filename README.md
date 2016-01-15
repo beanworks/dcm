@@ -236,6 +236,7 @@ Example:
 ## TODOs
 
 * Support docker hub images
+* Support CLI autocomplete for zsh
 * Add working examples
   * Containerize an app that involves a couple of micro services
   * Create a YAML config for DCM to setup, build and run the app
