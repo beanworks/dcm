@@ -236,7 +236,6 @@ Example:
 ## TODOs
 
 * Support docker hub images
-* Add command line autocomplete
 * Add working examples
   * Containerize an app that involves a couple of micro services
   * Create a YAML config for DCM to setup, build and run the app
@@ -244,7 +243,6 @@ Example:
   * Linux Distros
   * FreeBSD
   * Windows Cygwin
-* Increase test coverage (currently at 93%) to 95%
 
 ## Contributing
 
