@@ -61,6 +61,12 @@ func (d *Dcm) Setup() (int, error) {
 	}
 
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		_, ok := getMapVal(configs, "image").(string)
+		if ok {
+			// If image is defined for the service, then skip
+			// checking out the repository
+			return 0, nil
+		}
 		repo, ok := getMapVal(configs, "labels", "dcm.repository").(string)
 		if !ok {
 			return 1, fmt.Errorf(
