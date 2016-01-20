@@ -37,18 +37,20 @@ func (d *Dcm) Command() (int, error) {
 		return d.Run(moreArgs...)
 	case "build", "b":
 		return d.Run("build")
-	case "dir", "d":
+	case "dir":
 		return d.Dir(moreArgs...)
 	case "shell", "sh":
 		return d.Shell(moreArgs...)
 	case "branch", "br":
 		return d.Branch(moreArgs...)
-	case "update", "u":
+	case "update":
 		return d.Update(moreArgs...)
 	case "purge", "rm":
 		return d.Purge(moreArgs...)
-	case "list", "l":
+	case "list", "ls":
 		return d.List()
+	case "init":
+		return d.Init(moreArgs...)
 	default:
 		d.Usage()
 		return 127, nil
@@ -368,6 +370,10 @@ func (d *Dcm) List() (int, error) {
 		fmt.Fprintln(os.Stdout, service)
 		return 0, nil
 	})
+}
+
+func (d *Dcm) Init(args ...string) (int, error) {
+	return 0, nil
 }
 
 func (d *Dcm) Usage() {
