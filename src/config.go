@@ -23,18 +23,18 @@ func NewConfig() *Config {
 	return c.loadEnvConfig()
 }
 
-func NewConfigFile() *Config {
+func NewConfigFile() (*Config, error) {
 	c := NewConfig()
 	content, err := ioutil.ReadFile(c.File)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if err := yaml.Unmarshal(content, &c.Config); err != nil {
-		panic(fmt.Sprintf("Error parsing config file: %s", err))
+		return nil, fmt.Errorf("Error parsing config file: %s", err)
 	}
 
-	return c
+	return c, nil
 }
 
 func (c *Config) loadEnvConfig() *Config {

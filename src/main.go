@@ -6,19 +6,22 @@ import (
 )
 
 func main() {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Fprintln(os.Stderr, "DCM error:", err)
-		}
-	}()
+	if code, err := execDcmCmd(); err != nil {
+		fmt.Fprintln(os.Stderr, "DCM error:", err)
+		os.Exit(code)
+	}
+}
 
-	conf := NewConfigFile()
+func execDcmCmd() (int, error) {
+	conf, err := NewConfigFile()
+	if err != nil {
+		return 1, err
+	}
 	args := os.Args[1:]
-
 	dcm := NewDcm(conf, args)
 	code, err := dcm.Command()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "DCM error:", err)
+		return code, err
 	}
-	os.Exit(code)
+	return 0, nil
 }

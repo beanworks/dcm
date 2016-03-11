@@ -69,26 +69,29 @@ func helperCreateTestFile(t *testing.T, prefix, fixture string) string {
 }
 
 func TestCreateNewConfigFile(t *testing.T) {
-	var file string
+	var (
+		file string
+		err  error
+	)
 
 	// Negative case: Bad YAML file name
 	os.Setenv("DCM_CONFIG_FILE", "bad_file_name.yml")
-
-	assert.Panics(t, func() { NewConfigFile() })
+	_, err = NewConfigFile()
+	assert.Error(t, err)
 
 	// Negative case: Bad YAML config formatting
 	file = helperCreateTestFile(t, "bad_yaml", yamlFixtureBad)
 	defer os.Remove(file)
 	os.Setenv("DCM_CONFIG_FILE", file)
-
-	assert.Panics(t, func() { NewConfigFile() })
+	_, err = NewConfigFile()
+	assert.Error(t, err)
 
 	// Positive case: success
 	file = helperCreateTestFile(t, "good_yaml", yamlFixtureGood)
 	defer os.Remove(file)
 	os.Setenv("DCM_CONFIG_FILE", file)
-	c := NewConfigFile()
-
+	c, err := NewConfigFile()
+	assert.NoError(t, err)
 	assert.Equal(t, yamlConfig{
 		"foo": yamlConfig{
 			"bar": yamlConfig{

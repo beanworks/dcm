@@ -49,8 +49,6 @@ func (d *Dcm) Command() (int, error) {
 		return d.Purge(moreArgs...)
 	case "list", "ls":
 		return d.List()
-	case "init":
-		return d.Init(moreArgs...)
 	default:
 		d.Usage()
 		return 127, nil
@@ -100,12 +98,18 @@ func (d *Dcm) doForEachService(fn doForService) (int, error) {
 		service, _ := service.(string)
 		configs, ok := configs.(yamlConfig)
 		if !ok {
-			panic("Error reading configs for service: " + service)
+			return 1, fmt.Errorf("Error reading configs for service: %s", service)
 		}
 
 		code, err := fn(service, configs)
 		if err != nil {
-			return code, err
+			if code == 0 {
+				fmt.Println(err)
+			} else {
+				// Only when error code is not zero and error is not nil
+				// then break the iteration and return
+				return code, err
+			}
 		}
 	}
 
@@ -269,29 +273,77 @@ func (d *Dcm) branchForAll() (int, error) {
 
 func (d *Dcm) branchForOne(service string) (int, error) {
 	var dir string
-	if service == "dcm" {
-		dir = d.Config.Dir
-	} else {
-		dir = d.Config.Srv + "/" + service
-	}
-
-	if err := os.Chdir(dir); err != nil {
-		return 1, err
-	}
 
 	fmt.Print(service + ": ")
+
+	if service == "dcm" {
+		fmt.Print("branch: ")
+		dir = d.Config.Dir
+	} else {
+		configs, ok := getMapVal(d.Config.Config, service).(yamlConfig)
+		if !ok {
+			return 0, errors.New("Service not exists.")
+		}
+		if image, ok := getMapVal(configs, "image").(string); ok {
+			fmt.Println("Docker hub image:", image)
+			return 0, nil
+		}
+		if repo, ok := getMapVal(configs, "labels", "dcm.repository").(string); ok {
+			fmt.Print("Git repo: ", repo, ", branch: ")
+		}
+		dir = d.Config.Srv + "/" + service
+	}
+	if err := os.Chdir(dir); err != nil {
+		return 0, err
+	}
 	if err := d.Cmd.Exec("git", "rev-parse", "--abbrev-ref", "HEAD").Run(); err != nil {
-		return 1, err
+		return 0, err
 	}
 
 	return 0, nil
 }
 
 func (d *Dcm) Update(args ...string) (int, error) {
+	if len(args) < 1 {
+		return d.updateForAll()
+	} else {
+		return d.updateForOne(args[0])
+	}
+}
+
+func (d *Dcm) updateForAll() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
-		fmt.Print(service + ": ")
+		return d.updateForOne(service)
+	})
+}
+
+func (d *Dcm) updateForOne(service string) (int, error) {
+	fmt.Print(service + ": ")
+
+	configs, ok := getMapVal(d.Config.Config, service).(yamlConfig)
+	if !ok {
+		return 0, errors.New("Service not exists.")
+	}
+
+	updateable, ok := getMapVal(configs, "labels", "dcm.updateable").(bool)
+	if ok && !updateable {
+		// Service is flagged as not updateable
+		return 0, errors.New("Service not updateable. Skipping the update.")
+	}
+
+	image, ok := getMapVal(configs, "image").(string)
+	if ok {
+		// Service is using docker hub image
+		// Pull the latest version from docker hub
+		if err := d.Cmd.Exec("docker", "pull", image).Run(); err != nil {
+			return 0, err
+		}
+		return 0, nil
+	} else {
+		// Service is using a local build
+		// Pull the latest version from git
 		if err := os.Chdir(d.Config.Srv + "/" + service); err != nil {
-			return 1, err
+			return 0, err
 		}
 		branch, ok := getMapVal(configs, "labels", "dcm.branch").(string)
 		if !ok {
@@ -299,16 +351,15 @@ func (d *Dcm) Update(args ...string) (int, error) {
 			// the yaml config file, use "master" as default branch
 			branch = "master"
 		}
-
 		if err := d.Cmd.Exec("git", "checkout", branch).Run(); err != nil {
-			return 1, err
+			return 0, err
 		}
 		if err := d.Cmd.Exec("git", "pull").Run(); err != nil {
-			return 1, err
+			return 0, err
 		}
+	}
 
-		return 0, nil
-	})
+	return 0, nil
 }
 
 func (d *Dcm) Purge(args ...string) (int, error) {
@@ -332,10 +383,10 @@ func (d *Dcm) purgeImages() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
 		repo, err := d.getImageRepository(service)
 		if err != nil {
-			return 1, err
+			return 0, err
 		}
 		if err = d.Cmd.Exec("docker", "rmi", repo).Run(); err != nil {
-			return 1, err
+			return 0, err
 		}
 		return 0, nil
 	})
@@ -345,13 +396,13 @@ func (d *Dcm) purgeContainers() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
 		cid, err := d.getContainerId(service)
 		if err != nil {
-			return 1, err
+			return 0, err
 		}
 		if err := d.Cmd.Exec("docker", "kill", cid).Run(); err != nil {
-			return 1, err
+			return 0, err
 		}
 		if err := d.Cmd.Exec("docker", "rm", "-v", cid).Run(); err != nil {
-			return 1, err
+			return 0, err
 		}
 		return 0, nil
 	})
@@ -370,10 +421,6 @@ func (d *Dcm) List() (int, error) {
 		fmt.Fprintln(os.Stdout, service)
 		return 0, nil
 	})
-}
-
-func (d *Dcm) Init(args ...string) (int, error) {
-	return 0, nil
 }
 
 func (d *Dcm) Usage() {

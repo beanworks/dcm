@@ -264,7 +264,17 @@ func TestSetup(t *testing.T) {
 			err:  errors.New("exit status 1"),
 		},
 		{
-			name: "Positive case: success",
+			name: "Positive case: success with docker hub image",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"image": "docker-hub-image",
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+		{
+			name: "Positive case: success with local build",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -322,19 +332,20 @@ func TestDoForEachService(t *testing.T) {
 		},
 	}
 
-	// Negative case: for failing with panic
+	// Negative case: silently fail when encountering bad config
 	dcm.Config.Config = fixtureBad
 	doSrv = func(service string, configs yamlConfig) (int, error) {
 		return 0, nil
 	}
-	assert.Panics(t, func() { dcm.doForEachService(doSrv) })
+	code, err = dcm.doForEachService(doSrv)
+	assert.Equal(t, 1, code)
+	assert.Error(t, err)
 
-	// Negative case: for failing with error
+	// Negative case: fail with error
 	dcm.Config.Config = fixtureGood
 	doSrv = func(service string, configs yamlConfig) (int, error) {
 		return 1, errors.New("Error")
 	}
-	assert.NotPanics(t, func() { dcm.doForEachService(doSrv) })
 	code, err = dcm.doForEachService(doSrv)
 	assert.Equal(t, 1, code)
 	assert.Error(t, err)
@@ -344,7 +355,6 @@ func TestDoForEachService(t *testing.T) {
 	doSrv = func(service string, configs yamlConfig) (int, error) {
 		return 0, nil
 	}
-	assert.NotPanics(t, func() { dcm.doForEachService(doSrv) })
 	code, err = dcm.doForEachService(doSrv)
 	assert.Equal(t, 0, code)
 	assert.NoError(t, err)
@@ -695,43 +705,52 @@ func TestBranchForOne(t *testing.T) {
 	// Negative case: get dcm branch failed at os.Chdir()
 	dcm.Config.Dir = "/fake/dcm/dir"
 	code, err = dcm.branchForOne("dcm")
-
-	assert.Equal(t, 1, code)
+	assert.Equal(t, 0, code)
 	assert.EqualError(t, err, "chdir /fake/dcm/dir: no such file or directory")
-
-	// Negative case: get service branch failed at os.Chdir()
-	dcm.Config.Srv = "/fake/dcm/srv"
-	code, err = dcm.branchForOne("service")
-
-	assert.Equal(t, 1, code)
-	assert.EqualError(t, err, "chdir /fake/dcm/srv/service: no such file or directory")
 
 	// Negative case: git failed to get dcm branch
 	dcm.Config.Dir = dir
 	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/error")
 	code, err = dcm.branchForOne("dcm")
-
-	assert.Equal(t, 1, code)
+	assert.Equal(t, 0, code)
 	assert.EqualError(t, err, "exit status 1")
+
+	// Negative case: service not exists
+	dcm.Config.Srv = "/fake/dcm/srv"
+	code, err = dcm.branchForOne("invalid")
+	assert.Equal(t, 0, code)
+	assert.EqualError(t, err, "Service not exists.")
+
+	// Negative case: get service branch failed at os.Chdir()
+	dcm.Config.Srv = "/fake/dcm/srv"
+	dcm.Config.Config = yamlConfig{"service": yamlConfig{}}
+	code, err = dcm.branchForOne("service")
+	assert.Equal(t, 0, code)
+	assert.EqualError(t, err, "chdir /fake/dcm/srv/service: no such file or directory")
 
 	// Negative case: git failed to get service branch
 	dcm.Config.Srv = dir
+	dcm.Config.Config = yamlConfig{path.Base(srv): yamlConfig{}}
 	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/error")
 	code, err = dcm.branchForOne(path.Base(srv))
-
-	assert.Equal(t, 1, code)
+	assert.Equal(t, 0, code)
 	assert.EqualError(t, err, "exit status 1")
 
-	// Positive case: success
+	// Positive case: success with a service using docker hub image
+	dcm.Config.Config = yamlConfig{"service": yamlConfig{"image": "docker-hub-image"}}
+	code, err = dcm.branchForOne("service")
+	assert.Equal(t, 0, code)
+	assert.NoError(t, err)
+
+	// Positive case: success with dcm branch
 	dcm.Config.Dir = dir
 	dcm.Cmd.Setdir("/test/dcm/git/rev-parse/ok")
 	code, err = dcm.branchForOne("dcm")
-
 	assert.Equal(t, 0, code)
 	assert.NoError(t, err)
 }
 
-func TestUpdate(t *testing.T) {
+func TestUpdateForOne(t *testing.T) {
 	dir, err := ioutil.TempDir("", "dcm")
 	require.Nil(t, err)
 	srv, err := ioutil.TempDir(dir, "service")
@@ -746,9 +765,34 @@ func TestUpdate(t *testing.T) {
 	fixtures := []struct {
 		name, srv, dir string
 		config         yamlConfig
+		service        string
 		code           int
 		err            error
 	}{
+		{
+			name:    "Negative case: service not exists",
+			dir:     "",
+			srv:     "",
+			config:  yamlConfig{},
+			service: "invalid",
+			code:    0,
+			err:     errors.New("Service not exists."),
+		},
+		{
+			name: "Negative case: service not updateable",
+			dir:  "",
+			srv:  "",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.updateable": false,
+					},
+				},
+			},
+			service: "service",
+			code:    0,
+			err:     errors.New("Service not updateable. Skipping the update."),
+		},
 		{
 			name: "Negative case: failed to os.Chdir()",
 			dir:  "/test/dcm/update",
@@ -758,8 +802,9 @@ func TestUpdate(t *testing.T) {
 					"folder": "test",
 				},
 			},
-			code: 1,
-			err:  errors.New("chdir /test/dcm/dir/srv/testproj/invalid: no such file or directory"),
+			service: "invalid",
+			code:    0,
+			err:     errors.New("chdir /test/dcm/dir/srv/testproj/invalid: no such file or directory"),
 		},
 		{
 			name: "Negative case: cannot read default branch config, use master instead, and got `git checkout` error",
@@ -772,8 +817,9 @@ func TestUpdate(t *testing.T) {
 					},
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1"),
+			service: service,
+			code:    0,
+			err:     errors.New("exit status 1"),
 		},
 		{
 			name: "Negative case: failed to execute `git checkout`",
@@ -786,8 +832,9 @@ func TestUpdate(t *testing.T) {
 					},
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1"),
+			service: service,
+			code:    0,
+			err:     errors.New("exit status 1"),
 		},
 		{
 			name: "Negative case: failed to execute `git pull`",
@@ -800,11 +847,25 @@ func TestUpdate(t *testing.T) {
 					},
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1"),
+			service: service,
+			code:    0,
+			err:     errors.New("exit status 1"),
 		},
 		{
-			name: "Positive case: success",
+			name: "Positive case: success with docker hub image",
+			dir:  "",
+			srv:  "",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"image": "docker-hub-image",
+				},
+			},
+			service: "service",
+			code:    0,
+			err:     nil,
+		},
+		{
+			name: "Positive case: success with local build",
 			dir:  "/test/dcm/update",
 			srv:  dir,
 			config: yamlConfig{
@@ -814,8 +875,9 @@ func TestUpdate(t *testing.T) {
 					},
 				},
 			},
-			code: 0,
-			err:  nil,
+			service: service,
+			code:    0,
+			err:     nil,
 		},
 	}
 
@@ -823,7 +885,7 @@ func TestUpdate(t *testing.T) {
 		dcm.Cmd.Setdir(test.dir)
 		dcm.Config.Srv = test.srv
 		dcm.Config.Config = test.config
-		code, err := dcm.Update()
+		code, err := dcm.updateForOne(test.service)
 		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
 		if test.err != nil {
 			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
@@ -891,8 +953,8 @@ func TestPurgeImages(t *testing.T) {
 					"test": "purgeImages",
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1: error"),
+			code: 0,
+			err:  nil,
 		},
 		{
 			name: "Negative case: failed to execute `docker rmi`",
@@ -902,8 +964,8 @@ func TestPurgeImages(t *testing.T) {
 					"test": "purgeImages",
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1"),
+			code: 0,
+			err:  nil,
 		},
 		{
 			name: "Positive case: success",
@@ -949,8 +1011,8 @@ func TestPurgeContainers(t *testing.T) {
 					"test": "purgeContainers",
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1: error"),
+			code: 0,
+			err:  nil,
 		},
 		{
 			name: "Negative case: failed to execute `docker kill`",
@@ -959,8 +1021,8 @@ func TestPurgeContainers(t *testing.T) {
 					"test": "purgeContainers",
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1"),
+			code: 0,
+			err:  nil,
 		},
 		{
 			name: "Negative case: failed to execute `docker rm`",
@@ -969,8 +1031,8 @@ func TestPurgeContainers(t *testing.T) {
 					"test": "purgeContainers",
 				},
 			},
-			code: 1,
-			err:  errors.New("exit status 1"),
+			code: 0,
+			err:  nil,
 		},
 		{
 			name: "Positive case: success",
