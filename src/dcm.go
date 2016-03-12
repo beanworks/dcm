@@ -159,8 +159,8 @@ func (d *Dcm) runExecute(args ...string) (int, error) {
 		Setenv(env)
 	if err := c.Run(); err != nil {
 		return 1, fmt.Errorf(
-			"Error executing `docker-compose %s`: %v\nEnv vars: %s",
-			strings.Join(args, " "), err, strings.Join(c.Getenv(), ", "),
+			"Error executing `docker-compose %s`: %v",
+			strings.Join(args, " "), err,
 		)
 	}
 	return 0, nil
@@ -325,8 +325,8 @@ func (d *Dcm) updateForOne(service string) (int, error) {
 		return 0, errors.New("Service not exists.")
 	}
 
-	updateable, ok := getMapVal(configs, "labels", "dcm.updateable").(bool)
-	if ok && !updateable {
+	updateable, ok := getMapVal(configs, "labels", "dcm.updateable").(string)
+	if ok && updateable == "false" {
 		// Service is flagged as not updateable
 		return 0, errors.New("Service not updateable. Skipping the update.")
 	}
