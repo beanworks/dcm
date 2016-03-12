@@ -785,7 +785,7 @@ func TestUpdateForOne(t *testing.T) {
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
-						"dcm.updateable": false,
+						"dcm.updateable": "false",
 					},
 				},
 			},
