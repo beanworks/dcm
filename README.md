@@ -4,6 +4,18 @@
 [![Coverage Status](https://coveralls.io/repos/beanworks/dcm/badge.svg?service=github)](https://coveralls.io/github/beanworks/dcm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/beanworks/dcm)](https://goreportcard.com/report/github.com/beanworks/dcm)
 
+```text
+__/\\\\\\\\\\\\___________/\\\\\\\\\__/\\\\____________/\\\\_
+ _\/\\\////////\\\______/\\\////////__\/\\\\\\________/\\\\\\_
+  _\/\\\______\//\\\___/\\\/___________\/\\\//\\\____/\\\//\\\_
+   _\/\\\_______\/\\\__/\\\_____________\/\\\\///\\\/\\\/_\/\\\_
+    _\/\\\_______\/\\\_\/\\\_____________\/\\\__\///\\\/___\/\\\_
+     _\/\\\_______\/\\\_\//\\\____________\/\\\____\///_____\/\\\_
+      _\/\\\_______/\\\___\///\\\__________\/\\\_____________\/\\\_
+       _\/\\\\\\\\\\\\/______\////\\\\\\\\\_\/\\\_____________\/\\\_
+        _\////////////___________\/////////__\///______________\///__
+```
+
 DCM is a wrapper for docker-compose. It enables one click setup, build && run process for a set
 micro services with docker. DCM also provides a couple of neat shorthand commands.
 
