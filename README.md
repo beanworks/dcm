@@ -5,15 +5,20 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/beanworks/dcm)](https://goreportcard.com/report/github.com/beanworks/dcm)
 
 ```text
-__/\\\\\\\\\\\\___________/\\\\\\\\\__/\\\\____________/\\\\_
- _\/\\\////////\\\______/\\\////////__\/\\\\\\________/\\\\\\_
-  _\/\\\______\//\\\___/\\\/___________\/\\\//\\\____/\\\//\\\_
-   _\/\\\_______\/\\\__/\\\_____________\/\\\\///\\\/\\\/_\/\\\_
-    _\/\\\_______\/\\\_\/\\\_____________\/\\\__\///\\\/___\/\\\_
-     _\/\\\_______\/\\\_\//\\\____________\/\\\____\///_____\/\\\_
-      _\/\\\_______/\\\___\///\\\__________\/\\\_____________\/\\\_
-       _\/\\\\\\\\\\\\/______\////\\\\\\\\\_\/\\\_____________\/\\\_
-        _\////////////___________\/////////__\///______________\///__
+
+         _____         _____        ______  _______
+     ___|\    \    ___|\    \      |      \/       \
+    |    |\    \  /    /\    \    /          /\     \
+    |    | |    ||    |  |    |  /     /\   / /\     |
+    |    | |    ||    |  |____| /     /\ \_/ / /    /|
+    |    | |    ||    |   ____ |     |  \|_|/ /    / |
+    |    | |    ||    |  |    ||     |       |    |  |
+    |____|/____/||\ ___\/    /||\____\       |____|  /
+    |    /    | || |   /____/ || |    |      |    | /
+    |____|____|/  \|___|    | / \|____|      |____|/
+      \(    )/      \( |____|/     \(          )/
+       '    '        '   )/         '          '
+                         '
 ```
 
 DCM is a wrapper for docker-compose. It enables one click setup, build && run process for a set
@@ -21,14 +26,15 @@ micro services with docker. DCM also provides a couple of neat shorthand command
 
 **Prerequisites**
 * Linux Distros
-  * Docker
-  * Docker-Compose
+  * [Docker Engine](https://docs.docker.com/engine/installation/linux/)
+  * [Docker-Compose](https://docs.docker.com/compose/install/)
 * Mac OS X / Windows
-  * Docker Toolbox
+  * [Docker Toolbox](https://www.docker.com/products/docker-toolbox)
 
 OSX folks can also manually install docker:
 
-* VirtualBox (https://www.virtualbox.org/wiki/Downloads)
+* [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+* [Homebrew](http://brew.sh/)
 * Docker Client `brew install docker`
 * Docker Machine `brew install docker-machine`
 * Docker Compose `brew install docker-compose`
@@ -39,7 +45,7 @@ OSX folks can also manually install docker:
 * Linux, 64bit
   * Ubuntu (tested)
   * Debian
-  * Mint
+  * Mint (tested)
   * CentOS
   * Red Hat
   * Fedora
