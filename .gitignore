@@ -29,5 +29,6 @@ _testmain.go
 .DS_Store
 bin/dcm
 c.out
+c.out.tmp
 
 !.*.yml
