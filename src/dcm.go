@@ -75,6 +75,10 @@ func (d *Dcm) Setup() (int, error) {
 			)
 		}
 		dir := d.Config.Srv + "/" + service
+		if _, err := os.Stat(dir); err == nil {
+			fmt.Printf("Skipping git clone for %s. Service folder already exists.\n", service)
+			return 0, nil
+		}
 		c := d.Cmd.Exec("git", "clone", repo, dir).Setdir(d.Config.Dir)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
