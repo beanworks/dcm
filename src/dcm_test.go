@@ -1079,7 +1079,7 @@ func TestUsage(t *testing.T) {
 		dcm.Usage()
 	})
 
-	assert.Contains(t, out, "Docker Compose Manager\n")
+	assert.Contains(t, out, "DCM (Docker-Compose Manager)\n")
 	assert.Contains(t, out, "Usage:\n")
 	assert.Contains(t, out, "Example:\n")
 }

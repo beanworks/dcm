@@ -215,26 +215,28 @@ dcm build && dcm run
 The follow menu can be viewed in command line by entering `dcm` or `dcm help` commands.
 
 ```text
-Docker Compose Manager
+DCM (Docker-Compose Manager)
 
 Usage:
-  dcm help                Show this message.
-  dcm setup               Git checkout all the repositories for the services.
+  dcm help                Show this help menu.
+  dcm setup               Git checkout repositories for the services that require
+                          local docker build. It skips the service when the image
+                          is from docker hub, or the repo's folder already exists.
   dcm run [<args>]        Run docker-compose commands. If <args> is not given, by
-                          default DCM will run `up` command.
+                          default DCM will run `docker-compose up` command.
                           <args>: up, build, start, stop, restart
-  dcm build               Run build command that (re)create all the service images.
-                          Shorthand version of `dcm run build`.
+  dcm build               Docker (re)build service images that require local build.
+                          It's the shorthand version of `dcm run build` command.
   dcm shell <service>     Log into a given service container.
-  dcm purge [<type>]      Remove either all the containers or all the images or
-                          everything. If <type> is not given, by default DCM will
-                          purge everything.
+  dcm purge [<type>]      Remove either all the containers or all the images. If <type>
+                          is not given, by default DCM will purge everything.
                           <type>: images, containers, all
-  dcm branch <service>    Display the current branch for the given service name.
-  dcm goto [<service>]    Go to the service's folder. If <service> is not given,
-                          by default DCM will go to $DCM_DIR.
-  dcm update <service>    Update DCM and the services.
-  dcm list                list all the available services
+  dcm branch [<service>]  Display the current git branch for the given service that
+                          was built locally.
+  dcm goto [<service>]    Go to the service's folder. If <service> is not given, by
+                          default DCM will go to $DCM_DIR.
+  dcm update [<service>]  Update DCM and(or) the given service.
+  dcm list                List all the available services.
 
 Example:
   Initial setup
