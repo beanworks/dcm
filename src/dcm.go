@@ -215,7 +215,7 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 		return 1, errors.New("Error: no service name specified.")
 	}
 
-	cid, err := d.getContainerId(args[0])
+	cid, err := d.getContainerId(args[0], "-qf")
 	if err != nil {
 		return 1, err
 	}
@@ -227,21 +227,16 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 	return 0, nil
 }
 
-func (d *Dcm) getContainerId(service string) (string, error) {
+func (d *Dcm) getContainerId(service string, flag string) (string, error) {
 	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, service)
-	out, err := d.Cmd.Exec("docker", "ps", "-q", "-f", filter).Out()
+	if flag == "" {
+		flag = "-aq"
+	}
+	out, err := d.Cmd.Exec("docker", "ps", flag, filter).Out()
 	if err != nil {
 		return "", d.Cmd.FormatError(err, out)
 	}
-
 	cid := d.Cmd.FormatOutput(out)
-	if cid == "" {
-		return "", fmt.Errorf(
-			"Error: no running container name starts with %s_%s_",
-			d.Config.Project, service,
-		)
-	}
-
 	return cid, nil
 }
 
@@ -398,15 +393,30 @@ func (d *Dcm) purgeImages() (int, error) {
 
 func (d *Dcm) purgeContainers() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
-		cid, err := d.getContainerId(service)
+		// Try to get the docker container ID from running containers list
+		cid, err := d.getContainerId(service, "-qf")
 		if err != nil {
 			return 0, err
 		}
-		if err := d.Cmd.Exec("docker", "kill", cid).Run(); err != nil {
-			return 0, err
+		if cid != "" {
+			// If the container is running then kill it first
+			if err := d.Cmd.Exec("docker", "kill", cid).Run(); err != nil {
+				return 0, err
+			}
+		} else {
+			// Otherwise, try to get the docker container ID from a list that
+			// contains all containers including not running ones
+			cid, err = d.getContainerId(service, "-aqf")
+			if err != nil {
+				return 0, err
+			}
 		}
-		if err := d.Cmd.Exec("docker", "rm", "-v", cid).Run(); err != nil {
-			return 0, err
+		if cid != "" {
+			// Finally if the container exists (whether running or not running),
+			// remove it along with all the volumes linked to it
+			if err := d.Cmd.Exec("docker", "rm", "-v", cid).Run(); err != nil {
+				return 0, err
+			}
 		}
 		return 0, nil
 	})

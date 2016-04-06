@@ -102,8 +102,8 @@ func (c *CmdMock) Run() error {
 func (c *CmdMock) Out() ([]byte, error) {
 	switch c.name {
 	case "docker":
-		if len(c.args) == 4 && c.args[0] == "ps" {
-			switch c.args[3] {
+		if len(c.args) == 3 && c.args[0] == "ps" {
+			switch c.args[2] {
 			case "name=dcmtest_empty_container_id_":
 				return []byte(""), nil
 			case "name=dcmtest_ok_":
@@ -618,7 +618,7 @@ func TestGetContainerId(t *testing.T) {
 			name:    "Negative case: got an empty container id",
 			service: "empty_container_id",
 			cid:     "",
-			err:     errors.New("Error: no running container name starts with dcmtest_empty_container_id_"),
+			err:     nil,
 		},
 		{
 			name:    "Positive case: success",
@@ -633,7 +633,7 @@ func TestGetContainerId(t *testing.T) {
 	dcm.Config.Project = "dcmtest"
 
 	for n, test := range fixtures {
-		cid, err := dcm.getContainerId(test.service)
+		cid, err := dcm.getContainerId(test.service, "-qf")
 		assert.Equal(t, test.cid, cid, "[%d: %s] Incorrect docker container ID returned", n, test.name)
 		if test.err != nil {
 			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
