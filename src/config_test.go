@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var yamlFixtureGood string = `
+var yamlFixtureGoodVersion1 string = `
 foo:
   bar:
     baz: qux
@@ -19,6 +19,20 @@ yet:
     - value1
     - value2
     - value3
+`
+
+var yamlFixtureGoodVersion2 string = `
+version: "2"
+services:
+  foo:
+    bar:
+      baz: qux
+  another: value
+  yet:
+    another:
+      - value1
+      - value2
+      - value3
 `
 
 var yamlFixtureBad string = `
@@ -35,9 +49,9 @@ func TestCreateNewConfig(t *testing.T) {
 
 	assert.Equal(t, &Config{
 		Dir:     wd,
-		Project: "bean",
-		File:    wd + "/bean.yml",
-		Srv:     wd + "/srv/bean",
+		Project: "dcm",
+		File:    wd + "/dcm.yml",
+		Srv:     wd + "/srv/dcm",
 	}, c)
 }
 
@@ -70,8 +84,9 @@ func helperCreateTestFile(t *testing.T, prefix, fixture string) string {
 
 func TestCreateNewConfigFile(t *testing.T) {
 	var (
-		file string
-		err  error
+		file   string
+		err    error
+		config *Config
 	)
 
 	// Negative case: Bad YAML file name
@@ -87,12 +102,7 @@ func TestCreateNewConfigFile(t *testing.T) {
 	assert.Error(t, err)
 
 	// Positive case: success
-	file = helperCreateTestFile(t, "good_yaml", yamlFixtureGood)
-	defer os.Remove(file)
-	os.Setenv("DCM_CONFIG_FILE", file)
-	c, err := NewConfigFile()
-	assert.NoError(t, err)
-	assert.Equal(t, yamlConfig{
+	expectedYaml := yamlConfig{
 		"foo": yamlConfig{
 			"bar": yamlConfig{
 				"baz": "qux",
@@ -106,5 +116,43 @@ func TestCreateNewConfigFile(t *testing.T) {
 				"value3",
 			},
 		},
-	}, c.Config)
+	}
+
+	file = helperCreateTestFile(t, "good_yaml_ver1", yamlFixtureGoodVersion1)
+	defer os.Remove(file)
+	os.Setenv("DCM_CONFIG_FILE", file)
+	config, err = NewConfigFile()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedYaml, config.Config)
+
+	file = helperCreateTestFile(t, "good_yaml_ver2", yamlFixtureGoodVersion2)
+	defer os.Remove(file)
+	os.Setenv("DCM_CONFIG_FILE", file)
+	config, err = NewConfigFile()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedYaml, config.Config)
+}
+
+func TestIsDockerComposeVersion2(t *testing.T) {
+	assert.False(t, isDockerComposeVersion2(yamlConfig{
+		"foo": "bar",
+	}))
+
+	assert.False(t, isDockerComposeVersion2(yamlConfig{
+		"version": "2",
+		"foo":     "bar",
+	}))
+
+	assert.False(t, isDockerComposeVersion2(yamlConfig{
+		"services": yamlConfig{
+			"foo": "bar",
+		},
+	}))
+
+	assert.True(t, isDockerComposeVersion2(yamlConfig{
+		"version": "2",
+		"services": yamlConfig{
+			"foo": "bar",
+		},
+	}))
 }

@@ -276,7 +276,7 @@ neither of those editors, having a editor or IDE respects EditorConfig and autom
 
 #### Make a development copy
 
-Make sure you have Go 1.4+ installed and GOPATH set (https://golang.org/doc/code.html).
+Make sure you have Go 1.6+ installed and GOPATH set (https://golang.org/doc/code.html).
 
 ```shell
 git clone git@github.com:beanworks/dcm.git $GOPATH/src/github.com/beanworks/dcm

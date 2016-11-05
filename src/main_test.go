@@ -8,7 +8,7 @@ import (
 )
 
 func TestExecDcmCmd(t *testing.T) {
-	file := helperCreateTestFile(t, "good_yaml", yamlFixtureGood)
+	file := helperCreateTestFile(t, "good_yaml_ver2", yamlFixtureGoodVersion2)
 	defer os.Remove(file)
 	os.Setenv("DCM_CONFIG_FILE", file)
 	code, err := execDcmCmd()
