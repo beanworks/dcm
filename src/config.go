@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type yamlConfig map[interface{}]interface{}
@@ -13,14 +13,6 @@ type yamlConfig map[interface{}]interface{}
 type Config struct {
 	Dir, File, Project, Srv string
 	Config                  yamlConfig
-}
-
-func NewConfig() *Config {
-	c := &Config{}
-	c.Dir, _ = os.Getwd()
-	c.Project = "bean"
-
-	return c.loadEnvConfig()
 }
 
 func NewConfigFile() (*Config, error) {
@@ -34,7 +26,20 @@ func NewConfigFile() (*Config, error) {
 		return nil, fmt.Errorf("Error parsing config file: %s", err)
 	}
 
+	if isDockerComposeVersion2(c.Config) {
+		services, ok := getMapVal(c.Config, "services").(yamlConfig)
+		if ok {
+			c.Config = services
+		}
+	}
+
 	return c, nil
+}
+
+func NewConfig() *Config {
+	wd, _ := os.Getwd()
+	c := &Config{Dir: wd, Project: "dcm"}
+	return c.loadEnvConfig()
 }
 
 func (c *Config) loadEnvConfig() *Config {
@@ -54,4 +59,17 @@ func (c *Config) loadEnvConfig() *Config {
 	}
 
 	return c
+}
+
+func isDockerComposeVersion2(config yamlConfig) bool {
+	var ok bool
+	_, ok = getMapVal(config, "version").(string)
+	if !ok {
+		return false
+	}
+	_, ok = getMapVal(config, "services").(yamlConfig)
+	if !ok {
+		return false
+	}
+	return true
 }
