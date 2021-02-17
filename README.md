@@ -110,6 +110,11 @@ service:
 
 In the example above, DCM will the init script `$DCM_DIR/srv/project/service/dcm/init.bash`.
 
+#### `dcm.initscript_shell` (optional)
+
+If this option is given, `dcm run` command will run the init script with the value of this shell as executable.
+If no value is provided it defaults to `/bin/bash`.
+
 #### `dcm.branch` (optional)
 
 IF this option is given, DCM will switch to the git branch provided right after it clones
