@@ -177,7 +177,11 @@ func (d *Dcm) runInit() (int, error) {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
 		}
-		c := d.Cmd.Exec("/bin/bash", init).Setdir(d.Config.Srv + "/" + service)
+		shell, ok := getMapVal(configs, "labels", "dcm.initscript_shell").(string)
+		if !ok {
+			shell = "/bin/bash"
+		}
+		c := d.Cmd.Exec(shell, init).Setdir(d.Config.Srv + "/" + service)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
 				"Error executing init script [%s] for service [%s]: %v",
