@@ -232,10 +232,25 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 }
 
 func (d *Dcm) getContainerId(service string, flag string) (string, error) {
-	filter := fmt.Sprintf("name=%s_%s_", d.Config.Project, service)
+	var filterTemplate string
 	if flag == "" {
 		flag = "-aq"
 	}
+
+    // Find docker-compose version
+	dcVersion, err := d.Cmd.Exec("docker-compose", "--version", "--short").Out()
+	if err != nil {
+	    return "", d.Cmd.FormatError(err, dcVersion)
+	}
+
+	// V1 filter
+	filterTemplate = "name=%s_%s_"
+	if strings.HasPrefix(string(dcVersion), "2") {
+	    // V2 filter
+        filterTemplate = "name=%s-%s-"
+	}
+	filter := fmt.Sprintf(filterTemplate, d.Config.Project, service)
+
 	out, err := d.Cmd.Exec("docker", "ps", flag, filter).Out()
 	if err != nil {
 		return "", d.Cmd.FormatError(err, out)
