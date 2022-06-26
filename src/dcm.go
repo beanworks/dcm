@@ -131,6 +131,9 @@ func (d *Dcm) Run(args ...string) (int, error) {
 	case "init":
 		fmt.Println("Initializing project:", d.Config.Project, "...")
 		return d.runInit()
+	case "pre-init":
+		fmt.Println("Pre-initializating project", d.Config.Project, "...")
+		return d.runPreInit()
 	case "build":
 		fmt.Println("Building project:", d.Config.Project, "...")
 		return d.Run("execute", "build")
@@ -172,15 +175,13 @@ func (d *Dcm) runExecute(args ...string) (int, error) {
 
 func (d *Dcm) runInit() (int, error) {
 	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		shell := d.getShellExecutable(configs)
 		init, ok := getMapVal(configs, "labels", "dcm.initscript").(string)
 		if !ok {
 			fmt.Println("Skipping init script for service:", service, "...")
 			return 0, nil
 		}
-		shell, ok := getMapVal(configs, "labels", "dcm.initscript_shell").(string)
-		if !ok {
-			shell = "/bin/bash"
-		}
+
 		c := d.Cmd.Exec(shell, init).Setdir(d.Config.Srv + "/" + service)
 		if err := c.Run(); err != nil {
 			return 1, fmt.Errorf(
@@ -192,8 +193,32 @@ func (d *Dcm) runInit() (int, error) {
 	})
 }
 
+func (d *Dcm) runPreInit() (int, error) {
+	return d.doForEachService(func(service string, configs yamlConfig) (int, error) {
+		shell := d.getShellExecutable(configs)
+		preInit, ok := getMapVal(configs, "labels", "dcm.pre_initscript").(string)
+		if !ok {
+			return 0, nil
+		}
+
+		c := d.Cmd.Exec(shell, preInit).Setdir(d.Config.Srv + "/" + service)
+		if err := c.Run(); err != nil {
+			return 1, fmt.Errorf(
+				"Error executing pre-init script [%s] for service [%s]: %v",
+				preInit, service, err,
+			)
+		}
+		return 0, nil
+	})
+}
+
 func (d *Dcm) runUp() (int, error) {
-	code, err := d.Run("execute", "up", "-d", "--force-recreate")
+	code, err := d.Run("pre-init")
+	if err != nil {
+		return code, err
+	}
+
+	code, err = d.Run("execute", "up", "-d", "--force-recreate")
 	if err != nil {
 		return code, err
 	}
@@ -231,23 +256,33 @@ func (d *Dcm) Shell(args ...string) (int, error) {
 	return 0, nil
 }
 
+func (d *Dcm) getShellExecutable(configs yamlConfig) string {
+	var shell = "/bin/bash"
+	shellDefinition, ok := getMapVal(configs, "labels", "dcm.initscript_shell").(string)
+	if ok {
+		shell = shellDefinition
+	}
+
+	return shell
+}
+
 func (d *Dcm) getContainerId(service string, flag string) (string, error) {
 	var filterTemplate string
 	if flag == "" {
 		flag = "-aq"
 	}
 
-    // Find docker-compose version
+	// Find docker-compose version
 	dcVersion, err := d.Cmd.Exec("docker-compose", "--version", "--short").Out()
 	if err != nil {
-	    return "", d.Cmd.FormatError(err, dcVersion)
+		return "", d.Cmd.FormatError(err, dcVersion)
 	}
 
 	// V1 filter
 	filterTemplate = "name=%s_%s_"
 	if strings.HasPrefix(string(dcVersion), "2") {
-	    // V2 filter
-        filterTemplate = "name=%s-%s-"
+		// V2 filter
+		filterTemplate = "name=%s-%s-"
 	}
 	filter := fmt.Sprintf(filterTemplate, d.Config.Project, service)
 
@@ -467,7 +502,7 @@ func (d *Dcm) Usage() {
 	fmt.Println("                          is from docker hub, or the repo's folder already exists.")
 	fmt.Println("  dcm run [<args>]        Run docker-compose commands. If <args> is not given, by")
 	fmt.Println("                          default DCM will run `docker-compose up` command.")
-	fmt.Println("                          <args>: up, build, start, stop, restart")
+	fmt.Println("                          <args>: up, build, start, stop, restart, pre-init, init, execute")
 	fmt.Println("  dcm build               Docker (re)build service images that require local build.")
 	fmt.Println("                          It's the shorthand version of `dcm run build` command.")
 	fmt.Println("  dcm shell <service>     Log into a given service container.")
