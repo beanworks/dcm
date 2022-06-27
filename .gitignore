@@ -35,3 +35,7 @@ c.out
 c.out.tmp
 
 !.*.yml
+
+go.mod
+go.sum
+vendor/
