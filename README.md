@@ -94,6 +94,21 @@ service:
     dcm.repository: git@github.com:username/repository.git
 ```
 
+#### `dcm.pre_initscript` (optional)
+
+If this option is given, `dcm run` command will run the pre-init script automatically right before `docker-compose up` process is started.
+
+The value of the `dcm.pre_initscript` is relative to the service's folder.
+
+```yaml
+service:
+  build: "./srv/project/service/"
+  labels:
+    dcm.pre_initscript: "dcm/pre-init.bash"
+```
+
+In the example above, DCM will the pre-init script `$DCM_DIR/srv/project/service/dcm/pre-init.bash`.
+
 #### `dcm.initscript` (optional)
 
 If this option is given, `dcm run` command will run the init script automatically right after
@@ -229,7 +244,7 @@ Usage:
                           is from docker hub, or the repo's folder already exists.
   dcm run [<args>]        Run docker-compose commands. If <args> is not given, by
                           default DCM will run `docker-compose up` command.
-                          <args>: up, build, start, stop, restart
+                          <args>: up, build, start, stop, restart, pre-init, init, execute
   dcm build               Docker (re)build service images that require local build.
                           It's the shorthand version of `dcm run build` command.
   dcm shell <service>     Log into a given service container.
@@ -299,21 +314,21 @@ Run command `tree -a -I .git` you will see the following folder and file structu
 ├── Makefile
 ├── README.md
 ├── bin
-│   ├── dcm-darwin-amd64
-│   ├── dcm-freebsd-amd64
-│   ├── dcm-linux-amd64
-│   └── dcm-windows-amd64.exe
+│   ├── dcm-darwin-amd64
+│   ├── dcm-freebsd-amd64
+│   ├── dcm-linux-amd64
+│   └── dcm-windows-amd64.exe
 ├── dcm.sh
 ├── src
-│   ├── cmd.go
-│   ├── cmd_test.go
-│   ├── config.go
-│   ├── config_test.go
-│   ├── dcm.go
-│   ├── dcm_test.go
-│   ├── main.go
-│   ├── util.go
-│   └── util_test.go
+│   ├── cmd.go
+│   ├── cmd_test.go
+│   ├── config.go
+│   ├── config_test.go
+│   ├── dcm.go
+│   ├── dcm_test.go
+│   ├── main.go
+│   ├── util.go
+│   └── util_test.go
 └── srv
     └── .gitignore
 ```

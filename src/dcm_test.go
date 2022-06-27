@@ -390,6 +390,11 @@ func TestRun(t *testing.T) {
 			code: 0,
 		},
 		{
+			name: "dcm command `dcm run pre-init`",
+			args: []string{"pre-init"},
+			code: 0,
+		},
+		{
 			name: "dcm command `dcm run build`",
 			args: []string{"build"},
 			code: 0,
@@ -475,7 +480,7 @@ func TestRunInit(t *testing.T) {
 			err:  nil,
 		},
 		{
-			name: "Negative case: failed to exuecute init script",
+			name: "Negative case: failed to execute init script",
 			config: yamlConfig{
 				"service": yamlConfig{
 					"labels": yamlConfig{
@@ -492,6 +497,66 @@ func TestRunInit(t *testing.T) {
 				"service": yamlConfig{
 					"labels": yamlConfig{
 						"dcm.initscript": "test/dcm/run/init/ok",
+					},
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+	}
+
+	dcm := NewDcm(NewConfig(), []string{})
+	dcm.Cmd = &CmdMock{}
+
+	for n, test := range fixtures {
+		dcm.Config.Config = test.config
+		code, err := dcm.runInit()
+		assert.Equal(t, test.code, code, "[%d: %s] Incorrect error code returned", n, test.name)
+		if test.err != nil {
+			assert.EqualError(t, err, test.err.Error(), "[%d: %s] Incorrect error returned", n, test.name)
+		} else {
+			assert.NoError(t, err, "[%d: %s] Non-nil error returned", n, test.name)
+		}
+	}
+}
+
+func TestRunPreInit(t *testing.T) {
+	fixtures := []struct {
+		name   string
+		config yamlConfig
+		code   int
+		err    error
+	}{
+		{
+			name: "Negative case: config has no pre-init script",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.test": "test",
+					},
+				},
+			},
+			code: 0,
+			err:  nil,
+		},
+		{
+			name: "Negative case: failed to execute pre-init script",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.pre_initscript": "test/dcm/run/init/error",
+					},
+				},
+			},
+			code: 1,
+			err:  errors.New("Error executing pre-init script [test/dcm/run/init/error] for service [service]: exit status 1"),
+		},
+		{
+			name: "Positive case: success",
+			config: yamlConfig{
+				"service": yamlConfig{
+					"labels": yamlConfig{
+						"dcm.pre_initscript": "test/dcm/run/init/ok",
 					},
 				},
 			},
