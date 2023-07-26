@@ -5,7 +5,6 @@ PKG = $$(go list ./... | grep -v /vendor/)
 build: bin/dcm
 
 cross: build
-	env GOOS=darwin GOARCH=arm64 go build -o bin/dcm-darwin-arm64 ./src
 	env GOOS=darwin GOARCH=amd64 go build -o bin/dcm-darwin-amd64 ./src
 	env GOOS=freebsd GOARCH=amd64 go build -o bin/dcm-freebsd-amd64 ./src
 	env GOOS=linux GOARCH=amd64 go build -o bin/dcm-linux-amd64 ./src
