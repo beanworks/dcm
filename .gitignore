@@ -39,3 +39,4 @@ c.out.tmp
 go.mod
 go.sum
 vendor/
+beanyml/
