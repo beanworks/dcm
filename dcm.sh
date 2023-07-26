@@ -4,6 +4,9 @@ dcm() {
   local ARCH=$(uname -m)
   local BIN=$DCM_DIR/bin
 
+
+  if [[ "$OS" == "Darwin" ]] && [[ "$ARCH" == "arm64" ]]; then
+    BIN=$BIN/dcm-darwin-arm64
   if [[ "$OS" == "Darwin" ]] && [[ "$ARCH" == "x86_64" ]]; then
     BIN=$BIN/dcm-darwin-amd64
   elif [[ "$OS" == "Linux" ]] && [[ "$ARCH" == "x86_64" ]]; then
