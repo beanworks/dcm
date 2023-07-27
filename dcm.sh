@@ -13,7 +13,7 @@ dcm() {
     BIN=$BIN/dcm-linux-amd64
   elif [[ "$OS" == "FreeBSD" ]] && [[ "$ARCH" == "x86_64" ]]; then
     BIN=$BIN/dcm-freebsd-amd64
-  elif [[ "$OS" == "CYGWIN_NT-6.1" ]] && [[ "$ARCH" == "x86_64" ]]; then
+  elif ([[ "$OS" == "CYGWIN_NT"* ]] || [[ "$OS" == "MINGW"* ]]) && [[ "$ARCH" == "x86_64" ]]; then
     BIN=$BIN/dcm-windows-amd64.exe
   else
     >&2 echo "Sorry, your OS ($OS) and Arch ($ARCH) is not currently supported by DCM." && \
