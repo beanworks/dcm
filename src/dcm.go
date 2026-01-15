@@ -280,7 +280,7 @@ func (d *Dcm) getContainerId(service string, flag string) (string, error) {
 
 	// V1 filter
 	filterTemplate = "name=%s_%s_"
-	if strings.HasPrefix(string(dcVersion), "2") {
+	if !strings.HasPrefix(string(dcVersion), "1") {
 		// V2 filter
 		filterTemplate = "name=%s-%s-"
 	}
